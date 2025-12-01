@@ -1,0 +1,21 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+Template_project.Rproj
+
+## ignore everything in data folders EXCEPT for README.md
+data/raw/*
+!data/raw/README.md
+data/intermediate/*
+!data/intermediate/README.md
+data/archive/*
+!data/archive/README.md
+
+## ignore any junk created in code folder
+code/*.rds
+code/*.Rdata
+code/*.RData
+code/*.Rhistory
+code/*.Rproj.user
+code/*.Rproj
