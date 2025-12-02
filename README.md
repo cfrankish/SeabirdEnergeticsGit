@@ -2,10 +2,15 @@
 
 This repository contains the workflow needed to calculate and map estimates of non-breeding season energy expenditure for six species of pelagic seabirds in the North Atlantic from immersion and positional (GLS) data collected via the SEATRACK program (https://seatrack.net/). It uses a probabilistic approach where uncertainty is included where possible and propagated through the workflow to the final results. 
 
-## Schematic of workflow 
+This workflow stems from another project (SeabirdEnergetics) which was developed locally in R and is now being properly seperated from this initial work. 
+
+## Simple Schematic of workflow 
 
 <img width="2401" height="893" alt="image" src="https://github.com/user-attachments/assets/ffca257f-b7f3-4df6-b46b-6f82fcbf25d0" />
 
+Cirles 1 & 2 form the basis for the work conducted in a paper that is in review (details to follow).
+
+Circle 3 is under construction. 
 
 ## Pre-requisites 
 
