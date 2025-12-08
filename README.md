@@ -34,14 +34,14 @@ where nn****** is the project number and PROJECTNAME is your project name.
 
 ### Make all directories
 
-<pre>mkdir -p data/popdata_raw data/sst data/positionsIRMA code data/wetdry_raw</pre>
+<pre>mkdir -p data/wetdry_raw data/sst data/ice data/popdata_raw data/sst data/positionsIRMA scripts results</pre>
 
 ### Upload data that is needed to run workflow (update once SAGA is up and running again)
 
-- **raw immersion data**: Unless you are part of the SEATRACK project group, you will need to upload ***
-- **IRMA maps ([Fauchald et al. 2019](https://www.researchgate.net/profile/Arnaud-Tarroux-2/publication/334458632_Arctic-breeding_seabirds'_hotspots_in_space_and_time_-_A_methodological_framework_for_year-round_modelling_of_environmental_niche_and_abundance_using_light-logger_data/links/5d2c2ed292851cf44085033c/Arctic-breeding-seabirds-hotspots-in-space-and-time-A-methodological-framework-for-year-round-modelling-of-environmental-niche-and-abundance-using-light-logger-data.pdf))**: 
-- **Population maps ([Fauchald et al. 2021](https://www.int-res.com/articles/meps_oa/m676p255.pdf))**:
-- **SST & Sea-ice rasters ([Hersbach et al., 2023](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=overview))**: 
+- **raw immersion data**: *This part needs re-working* (switch raw data download to local R script)
+- **IRMA maps ([Fauchald et al. 2019](https://www.researchgate.net/profile/Arnaud-Tarroux-2/publication/334458632_Arctic-breeding_seabirds'_hotspots_in_space_and_time_-_A_methodological_framework_for_year-round_modelling_of_environmental_niche_and_abundance_using_light-logger_data/links/5d2c2ed292851cf44085033c/Arctic-breeding-seabirds-hotspots-in-space-and-time-A-methodological-framework-for-year-round-modelling-of-environmental-niche-and-abundance-using-light-logger-data.pdf))**: Need to be requested ([www.seatrack.net](https://seatrack.net/data/data-request-form/))
+- **Population maps ([Fauchald et al. 2021](https://www.int-res.com/articles/meps_oa/m676p255.pdf))**: Need to be requested ([www.seatrack.net](https://seatrack.net/data/data-request-form/))
+- **SST & Sea-ice rasters ([Hersbach et al., 2023](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=overview))**: *This part also needs re-working and will be reliant on a local R-script (instructions will be in the pre-requiste section).* 
 
 ### Run through steps in worflow
 The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one. Each step specifies expected input and output files, the R script which is called (contained in `code` folder), and requested walltime and memory usage. 
