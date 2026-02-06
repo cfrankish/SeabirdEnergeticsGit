@@ -253,14 +253,14 @@ colProj<-spTransform(colonySub, projection_NA)
 lox_sf_col<-st_as_sf(colProj)
 
 # Create extraction buffer
-buffered_lox <- st_buffer(lox_sf, dist = 200000) # buffer of 200 km radius
-buffered_lox_col <- st_buffer(lox_sf_col, dist = 200000) # buffer of 200 km radius
+#buffered_lox <- st_buffer(lox_sf, dist = 200000) # buffer of 200 km radius
+buffered_lox_col <- st_buffer(lox_sf_col, dist = 250000) # buffer of 500 km radius
 
 # Extract mean + sd (locations)
 loxdf<-as.data.frame(monthyearSub)
 
 # Around bird positions
-sstVals<-terra::extract(sstProj, buffered_lox)
+sstVals<-terra::extract(sstProj, lox_sf)
 sstVals_mean<-sstVals %>%
   dplyr::group_by(ID) %>%
   dplyr::summarise(sst_mean=mean(sst, na.rm=TRUE), sst_sd=sd(sst, na.rm=TRUE)) %>%
@@ -268,7 +268,7 @@ sstVals_mean<-sstVals %>%
   dplyr::select(sst_mean, sst_sd)
  
 # Around colony locations 
-sstVals_col<-terra::extract(sstProj, buffered_lox_col)
+sstVals_col<-terra::extract(sstProj,buffered_lox_col) # Here we keep the buffer because that's the wintering area
 sstVals_mean_col<-sstVals_col %>%
   dplyr::group_by(ID) %>%
   dplyr::summarise(sst_mean_col=mean(sst, na.rm=TRUE), sst_sd_col=sd(sst, na.rm=TRUE)) %>%
@@ -282,7 +282,7 @@ loxdf$sst_lox_sd<-sstVals_mean$sst_sd
 loxdf$sst_col_mean<-sstVals_mean_col$sst_mean_col
 loxdf$sst_col_sd<-sstVals_mean_col$sst_sd_col
 
-iceVals<-terra::extract(iceProj, buffered_lox)
+iceVals<-terra::extract(iceProj, lox_sf)
 iceVals_mean<-iceVals %>%
   dplyr::group_by(ID) %>%
   dplyr::summarise(ice_mean=mean(siconc, na.rm=TRUE), ice_sd=sd(siconc, na.rm=TRUE)) %>%
@@ -291,7 +291,7 @@ iceVals_mean<-iceVals %>%
 loxdf$ice_mean<-iceVals_mean$ice_mean
 loxdf$ice_sd<-iceVals_mean$ice_sd
 
-distVals<-terra::extract(distCoast, buffered_lox)
+distVals<-terra::extract(distCoast, lox_sf)
 distVals_mean<-distVals %>%
   dplyr::group_by(ID) %>%
   dplyr::summarise(dist_mean=mean(distCoast_projected, na.rm=TRUE), dist_sd=sd(distCoast_projected, na.rm=TRUE)) %>%
