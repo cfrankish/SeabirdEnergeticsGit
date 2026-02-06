@@ -196,7 +196,7 @@ calculateTimeInActivity_BLK<-function(data, irmaData){
     fill(distColonyKm_next, .direction=c("down")) %>%
     dplyr::group_by(BoutNo) %>%
     # Determine distance to land & ice concentration
-    dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), rnorm(mean=ice_mean, sd=ice_sd, n=n_distinct(BoutNo)), NA)) %>%
+    dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), ice_mean, NA)) %>%
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random>1, 1, ice_random)) %>%
     dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
@@ -844,7 +844,7 @@ methodCaitlin<-function(data, irmaData, speciesLatin) {
   activityAdjust2<-FlightBoutLengths2 %>%
     dplyr::group_by(BoutNo, distColonyKm) %>%
     # Determine distance to land & ice concentration
-    dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), rnorm(mean=ice_mean, sd=ice_sd, n=n_distinct(BoutNo)), NA)) %>%
+    dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), ice_mean, NA)) %>%
     dplyr::mutate(ice_random=ifelse(ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(ice_random>1, 1, ice_random)) %>%
 	dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Change this to zero if species is incorrect
@@ -3344,11 +3344,539 @@ return(allEnergy)
 
 }
 
+### Function to grid behaviour for seabirds ###
 
+gridBeh<-function(data, map) {
 
+print("Gridding behaviour..")
 
+# Turn map into a grid #
+grid<-as.data.frame(map, xy=TRUE)
 
+# Add columns that I want 
+grid$timeFlight<-0 # time spent in flight in hours at colony 1
+grid$timeForage<-0 # time spent foraging in hours at colony 1
+grid$timeActive<-0 # time spent foraging in hours at colony 1
+grid$timeLand<-0 # time spent foraging in hours at colony 2
+grid$timeRestWater<-0 # time spent foraging in hours at colony 2
+grid$timeTotal<-0 # total time spent
+grid<-grid %>%
+arrange(x, y) 
 
+# Determine number of months to loop through
+Months<-unique(data$month)
 
+# Make an an empty list to save the results in
+BirdActivityFinal_All<-list()
 
+print("Month...")
 
+for (i in 1:length(Months)) {
+
+print(paste0(i))
+
+# Subset to month i
+monthSub<-Months[i]
+
+# Cut actBudgets
+actMonth<-subset(data, month==monthSub)
+
+# Calculate total time in different behaviours per month
+totalTime<-actMonth %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id, month) %>%
+dplyr::summarise(totFlight=sum(tFlight), totActive=sum(tActive), totRest=sum(tRestWater), totLand=sum(tLand), totForage=sum(tForage), totHrs=sum(totFlight, totActive, totRest, totLand, totForage), .groups = "drop")
+
+# Rename our grid
+gridMonth<-grid %>%
+dplyr::filter(x>min(actMonth$mean.lon) - (res(map) + 1) & x<max(actMonth$mean.lon) + res(map) + 1 & y > min(actMonth$mean.lat) - (res(map) +1) & y < max(actMonth$mean.lat) + res(map) +1)
+
+for (m in 1:nrow(grid)) {
+
+# Subset grid x
+gridSub<-gridMonth[m,]
+
+resx<-res(map)[1]
+resy<-res(map)[2]
+
+# Subset coordinates which fit #
+loxSub1<-subset(actMonth,   mean.lon > gridSub$x & mean.lon < gridSub$x + resx & mean.lat > gridSub$y & mean.lat < gridSub$y + resy)
+
+if (nrow(loxSub1)>0) {
+
+# Calculate time spent in flight
+timeFlight<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tFlight), totTimeAll=sum(tFlight, tActive, tRestWater, tLand, tForage), .groups = "drop") %>%
+dplyr::mutate(propTime=totTime/totTimeAll)
+
+# Calculate time spent foraging
+timeForage<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tForage), totTimeAll=sum(tFlight, tActive, tRestWater, tLand, tForage), .groups = "drop") %>%
+dplyr::mutate(propTime=totTime/totTimeAll)
+
+# Calculate time spent on land
+timeLand<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tLand), totTimeAll=sum(tFlight, tActive, tRestWater, tLand, tForage), .groups = "drop") %>%
+dplyr::mutate(propTime=totTime/totTimeAll)
+
+# Calculate time spent on land
+timeActive<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tActive), totTimeAll=sum(tFlight, tActive, tRestWater, tLand, tForage), .groups = "drop") %>%
+dplyr::mutate(propTime=totTime/totTimeAll)
+
+# Calculate time spent on land
+timeRest<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tRestWater), totTimeAll=sum(tFlight, tActive, tRestWater, tLand, tForage), .groups = "drop") %>%
+dplyr::mutate(propTime=totTime/totTimeAll)
+
+# Calculate total time
+timeTot<-loxSub1 %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(totTime=sum(tFlight, tRestWater, tForage, tActive, tLand), .groups = "drop") %>%
+dplyr::full_join(totalTime, by=c("species", "colony", "individ_id")) %>%
+replace_na(list(totTime=0)) %>%
+dplyr::mutate(propTime=totTime/totHrs)
+
+#nas<-subset(timeLand, is.na(propTime))
+#if(nrow(nas)>0) {break}
+
+# Save results in grid for plotting
+gridMonth$timeFlight[m]<-mean(timeFlight$propTime)
+gridMonth$timeForage[m]<-mean(timeForage$propTime)
+gridMonth$timeActive[m]<-mean(timeActive$propTime)
+gridMonth$timeLand[m]<-mean(timeLand$propTime)
+gridMonth$timeRestWater[m]<-mean(timeRest$propTime)
+gridMonth$timeTotal[m]<-mean(timeTot$propTime)
+
+# Replace NAs with 0
+gridMonth[is.na(gridMonth)] <- 0
+
+}
+
+}
+
+# Add number of locations
+gridMonth$month<-Months[i]
+gridMonth$individ_id<-data$individ_id[1]
+gridMonth$rep<-data$rep[1]
+
+# Save results
+BirdActivityFinal_All<-rbind(BirdActivityFinal_All, gridMonth)
+
+}
+
+return(BirdActivityFinal_All)
+
+}
+
+### Same function as above but much faster I think ###
+
+gridBeh2<-function(data, map) {
+
+print("Gridding behaviour...")
+  
+  # Get raster
+  r <- map
+  resx <- res(r)[1]
+  resy <- res(r)[2]
+  
+  # Assign each point to a raster cell
+  data <- data %>%
+    mutate(cell = cellFromXY(r, cbind(mean.lon, mean.lat)))
+  
+  # Aggregate behavior times per cell, month, species, colony, individual
+  agg <- data %>%
+    group_by(month, species, colony, individ_id, cell) %>%
+    summarise(
+      timeFlight = sum(tFlight, na.rm = TRUE),
+      timeForage = sum(tForage, na.rm = TRUE),
+      timeActive = sum(tActive, na.rm = TRUE),
+      timeLand   = sum(tLand, na.rm = TRUE),
+      timeRestWater = sum(tRestWater, na.rm = TRUE),
+      timeTotal = sum(tFlight + tForage + tActive + tLand + tRestWater, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Add raster coordinates for plotting
+  coords <- xyFromCell(r, agg$cell)
+  agg <- agg %>%
+    mutate(x = coords[,1],
+           y = coords[,2])
+  
+  # Replace NA with 0 just in case
+  agg <- agg %>%
+    mutate(across(c(timeFlight, timeForage, timeActive, timeLand, timeRestWater, timeTotal), ~replace_na(., 0)))
+	
+	agg2 <- agg %>%
+  mutate(
+    propFlight = timeFlight / timeTotal,
+    propForage = timeForage / timeTotal,
+    propActive = timeActive / timeTotal,
+    propLand   = timeLand / timeTotal,
+    propRestWater = timeRestWater / timeTotal
+  )
+  
+  return(agg2)
+}
+
+### Function to carry out one type of spatial interpolation ###
+
+run_gam_grid <- function(ActMonthlyMap, rast.template, month, beh) {
+
+  dat <- subset(ActMonthlyMap, month == month)
+  if (nrow(dat) == 0) return(NULL)
+
+  dat$individ_id <- factor(dat$individ_id)
+
+  xyCoords <- as.data.frame(rast.template, xy = TRUE)
+  xyCoords$individ_id <- dat$individ_id[1]
+
+  # Prepare behavior to plot #
+  behPredict<-paste0("prop", beh)
+
+  # behaviour column used dynamically
+  f <- as.formula(paste0(behPredict, " ~ s(x, y) + s(individ_id, bs='re')"))
+
+  gam_mod <- mgcv::gam(
+    formula = f,
+    data = dat,
+    family = betar,
+    weights = timeTotal
+  )
+
+  preds <- predict(gam_mod, newdata = xyCoords, exclude = "s(individ_id)", type = "response")
+  xyCoords$predictions <- preds
+
+  coordinates(xyCoords) <- ~ x + y
+  pred_raster <- rasterize(xyCoords, rast.template, field = "predictions", fun = mean)
+
+  return(pred_raster)
+}
+
+run_idw <- function(gridBehBird, rast.template, month, beh) {
+
+  grid_sub <- subset(gridBehBird, month == month)
+  if (nrow(grid_sub) == 0) return(NULL)
+
+  # behaviour field = beh
+  names(grid_sub)[names(grid_sub) == beh] <- "beh_value"
+
+  coordinates(grid_sub) <- ~x + y
+  rastDF <- as.data.frame(rast.template, xy = TRUE)
+  coordinates(rastDF) <- ~x + y
+  gridded(rastDF) <- TRUE
+
+  idw_result <- gstat::idw(
+    formula = beh_value ~ 1,
+    locations = grid_sub,
+    newdata = rastDF,
+    idp = 1
+  )
+
+  idw_raster <- raster(idw_result)
+  return(idw_raster)
+}
+
+run_gam_points <- function(monthRandom, rast.template, beh) {
+
+  dat <- monthRandom
+  if (!beh %in% colnames(dat)) return(NULL)
+
+  dat_sub <- dat[dat[[beh]] > 0 & dat[[beh]] < 1, ]   # beta family restrictions
+  if (nrow(dat_sub) == 0) return(NULL)
+
+  dat_sub$individ_id <- factor(dat_sub$individ_id)
+
+  f <- as.formula(paste0(beh, " ~ s(mean.lon, mean.lat) + s(individ_id, bs='re')"))
+
+  gam_mod <- mgcv::gam(
+    formula = f,
+    data = dat_sub,
+    family = betar
+  )
+
+  xyCoords <- as.data.frame(rast.template, xy = TRUE)
+  xyCoords$individ_id <- dat_sub$individ_id[1]
+  names(xyCoords)[names(xyCoords) == "x"] <- "mean.lon"
+  names(xyCoords)[names(xyCoords) == "y"] <- "mean.lat"
+
+  preds <- predict(gam_mod, newdata = xyCoords, exclude = "s(individ_id)", type = "response")
+
+  pred_df <- data.frame(predictions = preds, mean.lon = xyCoords$mean.lon, mean.lat = xyCoords$mean.lat)
+  coordinates(pred_df) <- ~ mean.lon + mean.lat
+
+  pred_raster <- rasterize(pred_df, rast.template, field = "predictions", fun = mean)
+
+  return(pred_raster)
+}
+
+run_gam_krig <- function(monthRandom, rast.template, projection_NA, beh) {
+
+  dat <- monthRandom
+  if (!beh %in% colnames(dat)) return(NULL)
+
+  dat_sub <- dat[dat[[beh]] > 0, ]  
+  if (nrow(dat_sub) == 0) return(NULL)
+
+  dat_sub$tBeh <- dat_sub[[beh]] * 24
+  coordinates(dat_sub) <- ~mean.lon + mean.lat
+  proj4string(dat_sub) <- "+proj=longlat +datum=WGS84"
+
+  dat_trans <- data.frame(spTransform(dat_sub, projection_NA))
+
+  f <- as.formula(paste0("tBeh ~ s(coords.x1, coords.x2) + s(individ_id, bs='re')"))
+
+  gam_mod <- mgcv::gam(f, data = dat_trans)
+
+  rast_trans <- raster::projectRaster(rast.template, crs = projection_NA)
+  xy <- as.data.frame(rast_trans, xy = TRUE)
+  xy$individ_id <- dat_trans$individ_id[1]
+  names(xy)[1:2] <- c("coords.x1", "coords.x2")
+
+  preds <- predict(gam_mod, newdata = xy, exclude = "s(individ_id)", type = "response")
+
+  pred_df <- data.frame(predictions = preds, coords.x1 = xy$coords.x1, coords.x2 = xy$coords.x2)
+  coordinates(pred_df) <- ~ coords.x1 + coords.x2
+  pred_raster <- rasterize(pred_df, rast_trans, "predictions")
+
+  # Kriging
+  sp_pts <- SpatialPointsDataFrame(coords = dat_trans[, c("coords.x1", "coords.x2")],
+                                   data = dat_trans, proj4string = CRS(projection_NA))
+
+  sp_pts$residLMM <- resid(gam_mod, type = "response")
+
+  variogram_model <- vgm(model = "Sph", nugget = 0.1)
+  v <- variogram(residLMM ~ 1, sp_pts)
+  v_fit <- fit.variogram(v, model = variogram_model)
+
+  rstPix <- as(rast_trans, "SpatialPixelsDataFrame")
+  crs(rstPix) <- projection_NA
+
+  krig_map <- krige(residLMM ~ 1, sp_pts, rstPix, model = v_fit)
+  krig_raster <- raster(krig_map, layer = "var1.pred")
+
+  final <- pred_raster + krig_raster
+
+  return(final)
+}
+
+### Function for plotting where top % of data is ###
+
+topEnergy<-function(df, percent, columnName) {
+
+df$energy<-df[[columnName]]
+
+# Remove missing values if any
+df <- df[!is.na(df$energy), ]
+
+# Sort descending by energy
+df_sorted <- df[order(df$energy, decreasing = TRUE), ]
+
+# Cumulative proportion of total energy
+df_sorted$cum_energy <- cumsum(df_sorted$energy) / sum(df_sorted$energy)
+
+# Keep cells contributing to 90% of total energy
+df_10 <- df_sorted[df_sorted$cum_energy <= percent, ]
+
+return(df_10)
+
+}
+
+## Function for plotting top % of data as contour lines ##
+
+topEnergy_contour<-function(df, percent, columnName) {
+
+# Change df into a xyz data frame for transforming into a raster
+plot1<-df[,c("x", "y")] 
+plot1$z<-df[[columnName]]
+
+# Turn into raster
+rast1<-raster::rasterFromXYZ(plot1)
+v <- values(rast1)
+
+# Rank cells by energy
+ord <- order(v, decreasing = TRUE)
+cum <- numeric(length(v))
+cum[ord] <- cumsum(v[ord]) / sum(v)
+
+# Put cumulative surface back into raster
+r_cum <- rast1
+values(r_cum) <- NA
+values(r_cum)[!is.na(values(rast1))] <- cum
+r_terra <- rast(r_cum)
+contours <- as.contour(
+  r_terra,
+  levels = c(percent)
+)
+
+# Turn back into data frame
+r_df<-as.data.frame(r_terra, xy=TRUE)
+
+return(r_df)
+
+}
+
+### Function for extracting activity budget for a given model colony ###
+extractBudget<-function(modelColonySub, speciesSub, monthSub) {
+
+# List table with Ids & colony names #
+idCatalogue<-read.csv("./results/tables/main/table1_idcatalogue.csv")
+
+# Translate the model colony name from the text in Per's rasters to the ones in mine #
+modelcoloniesTranslate<-data.frame(modelColony_Per=c("Kap_Hoegh","Bjoernoeya","Hornsund","Isfjorden", "Franz_Josef_Land", "Witless_Bay","Isle_of_May","Faroe_Islands", "Vestmannaeyjar","Papey","Grimsey","Runde_and_Aalesund"
+,"Sklinna", "Roest", "Anda", "Hjelmsoeya","Hornoeya", "Skellig_Michael", "Little_Saltee" ,"Eynhallow", "Jan_Mayen","Breidafjordur" ,"Skjalfandi","Jarsteinen", "Alkefjellet",
+"Sermilinnguaq", "Kippaku", "Isle_of_Canna", "Nuuk", "Langanes", "Kongsfjorden", "Anda", "Cape_Krutik", "Kara_Gate", "Russkaya_Gavan",
+"Latrabjarg", "Cape_Gorodetskiy", "Coats_Island",  "Oranskie_Islands"),
+modelColony_saved=c("kaphoegh","bjornoya","hornsund","isfjorden", "franzjosefland", "witlessbay","isleofmay","faroeislands", "vestmannaeyjar","papey","grimsey","rundeandaalesund"
+,"sklinna", "rost", "anda", "hjelmsoya","hornoya", "skelligmichael", "littlesaltee" ,"eynhallow", "janmayen","breidafjordur" ,"skjalfandi","jarsteinen", "alkefjellet",
+"sermilinnguaq", "kippaku", "isleofcanna", "nuuk", "langanes", "kongsfjorden", "anda", "capekrutik", "karagate", "russkayagavan",
+"latrabjarg", "capegorodetskiy", "coatsisland",  "oranskieislands"),  
+modelColony_database=c("Kap Höegh", "Bjørnøya", "Hornsund", "Isfjorden", "Franz Josef Land", "Witless Bay", "Isle of May", "Faroe Island", "Vestmannaeyjar", "Papey", "Grimsey", "Runde and Ålesund", "Sklinna", "Røst", "Anda",
+"Hjemlsøya", "Hornøya", "Skellig Michael", "Little Saltee", "Eynhallow", "Jan Mayen", "Breidafjordur", "Skjalfandi", "Jarsteinen", "Alkefjellet",
+"Sermilinnguaq", "Kippaku", "Isle of Canna", "Nuuk", "Langanes", "Kongsfjorden", "Anda", "Cape Krutik", "Kara Gate", "Russkaya Gavan",
+"Latrabjarg", "Cape Gorodetskiy", "Coats Island",  "Oranskie Islands"))
+
+# Find correct model colony translation
+modelColMatch<-subset(modelcoloniesTranslate, modelColony_Per==modelColonySub)$modelColony_database[1]
+modelSave<-subset(modelcoloniesTranslate, modelColony_Per==modelColonySub)$modelColony_saved[1]
+
+if(speciesSub=="Northern fulmar" & modelSave=="jarsteinen") {
+modelSave<-"karmoy"
+}
+
+# Make sure we were able to find a colony match #
+if (length(modelColMatch)<1) stop(print("Error: no match with model colony name"))
+
+# Transform species sub into how it's written in the saved files
+speciesMatch<-gsub(" ", "", speciesSub)
+speciesMatch<-gsub("-", "", speciesMatch)
+speciesMatch<-gsub("ü", "u", speciesMatch)
+speciesMatch<-gsub("'", "", speciesMatch)
+
+# But then also filter for files
+allBudgets<-list.files("/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3/", full.names=TRUE)
+allBudgets_colony<-allBudgets[grep(paste0("_", modelSave, "_"), allBudgets)] # Subset to colony of interest
+allBudgets_monthly<-allBudgets_colony[grep("monthly", allBudgets_colony)] # Subset to monthly data
+allBudgets_species<-allBudgets_monthly[grep(speciesMatch, allBudgets_monthly)]
+
+# make sure we identified only one budget file #
+if (!length(allBudgets_species) %in% c(1)) stop (print("Error: wrong number of budget files"))
+
+# Now we open it #
+budgets<-read.csv(allBudgets_species[1])
+
+# Filter to month of interest #
+budgets_sub<-subset(budgets, month==monthSub)
+
+# Filter out birds with not enough days & sum per month #
+birdMonth<-budgets_sub %>%
+ungroup() %>%
+dplyr::group_by(species, colony, month) %>%
+dplyr::summarise(FlightHrs_mean=mean(tFlightMean), LandHrs_mean=mean(tLandMean), RestWaterHrs_mean=mean(tRestWaterMean), ActiveHrs_mean=mean(tActiveMean),
+ForageHrs_mean=mean(tForageMean), .groups="drop")
+
+return(birdMonth)
+
+}
+
+### Function for making randomized polygons. They are made in a new location and rotated. It's so I can compare values in these fake ones to real ones ###
+
+# Function made by chat gpt so let's see how this goes
+
+st_rotate <- function(x, angle_deg, center = st_centroid(st_union(x))) {
+  angle <- angle_deg * pi/180
+  M <- matrix(c(cos(angle), -sin(angle),
+                sin(angle),  cos(angle)), nrow = 2, byrow = TRUE)
+
+  ctr <- st_coordinates(center)[1, 1:2]
+
+  g <- st_geometry(x)
+  g_rot <- (g - ctr) * M + ctr
+
+  st_set_geometry(x, g_rot)
+}
+
+make_random_poly <- function(patchNo, numberPolys, patchProj, availTrans) {
+
+print("Generating random patches...")
+
+# PatchProj is projected patch #
+
+for (i in 1:numberPolys) {
+
+repeat{
+
+# Rotate polygon at random #
+patchProj <- st_make_valid(patchProj)
+#rotateRandom <- rotate.polygon(patchProj, angle=sample(0:360, 1))
+rotateRandom <- st_rotate(patchProj, sample(0:360, 1))
+
+# Find out extent of terra raster
+e <- ext(availTrans)
+
+xmin <- e$xmin
+xmax <- e$xmax
+ymin <- e$ymin
+ymax <- e$ymax
+
+# Determine maximum distances this patch can move by #
+distancex<-xmax-xmin
+distancey<-ymax-ymin
+
+# Choose random amount to move patch by
+dx <-sample(0:distancex, 1)
+dy <-sample(0:distancey, 1)   # meters south
+
+# Move polygon
+poly_moved <- rotateRandom
+st_geometry(poly_moved) <- st_geometry(rotateRandom) + c(dx, dy)
+st_crs(poly_moved)<-projection_NA # Specify projection
+
+# Extract values from our availability raster
+vpoly <- vect(poly_moved)   # convert sf -> terra vector
+vals <- terra::extract(availTrans, vpoly)
+vals[is.na(vals)] <- 0 # to make my ifelse statement below easier
+
+# all(vals == TRUE)
+
+if (all(vals == 1)) {
+break
+} 
+
+}
+
+# Create an sf to return?
+
+if (i==1) {
+
+ids<-c(paste0(patchNo, "_observed"), paste0(patchNo, "_control_1"))
+polys <- rbind(patchProj, poly_moved)
+
+} else {
+
+newId<-paste0(patchNo, "_control_", i)
+ids<-append(ids, newId)
+polys<-rbind(polys, poly_moved)
+
+}
+
+}
+
+# Give the polygons new names #
+polysFinal<-polys %>%
+dplyr::mutate(patches=ids)
+
+return(polysFinal)
+
+}

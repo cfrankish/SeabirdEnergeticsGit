@@ -273,13 +273,13 @@ sessions$sst_random_start<-sessions$sst_lox_mean
 
 if (j==2) {
 
-sessions$sst_random_start<-sessions$sst_lox_mean - sessions$sst_lox_sd
+sessions$sst_random_start<-sessions$sst_lox_mean
 
 }
 
 if (j==3) {
 
-sessions$sst_random_start<-sessions$sst_lox_mean + sessions$sst_lox_sd
+sessions$sst_random_start<-sessions$sst_lox_mean
 
 }
 
@@ -298,13 +298,13 @@ sessions$ice_random<-sessions$ice_mean
 
 if (j==2) {
 
-sessions$ice_random<-sessions$ice_mean- sessions$ice_sd
+sessions$ice_random<-sessions$ice_mean
 
 }
 
 if (j==3) {
 
-sessions$ice_random<-sessions$ice_mean + sessions$ice_sd
+sessions$ice_random<-sessions$ice_mean
 
 }
 
@@ -371,7 +371,7 @@ actRes$individ_id<-idSub
 tempColony<-dataSpeciesIdSub %>%
 dplyr::select(date_time, sst_col_mean, sst_col_sd) %>%
 dplyr::group_by(date_time) %>%
-dplyr::mutate(sst_random_colony=rnorm(mean=sst_col_mean, sd=sst_col_sd, n=n_distinct(date_time))) %>%
+dplyr::mutate(sst_random_colony=sst_col_mean) %>%
 ungroup() %>%
 dplyr::mutate(date=substr(date_time, 1, 10)) %>%
 dplyr::group_by(date) %>%

@@ -155,11 +155,11 @@ sessions$Th1<-sample(subset(modelParamsSub, parameter=="Th1")$values[[1]], 1) # 
 sessions$Th2<-subset(modelParamsSub, parameter=="Th2")$values # Fixed value
 sessions$L1_colony_min<-min(subset(modelParamsSub, parameter=="L1_colony")$values[[1]]) # Fixed value
 sessions$L1_colony_max<-max(subset(modelParamsSub, parameter=="L1_colony")$values[[1]]) # Fixed value
-sessions$ice_random<-rnorm(mean=sessions$ice_mean, sd=sessions$ice_sd, n=nrow(sessions)) # I will change this later to the first value of every dry bout (happens in the activity functions)
+sessions$ice_random<-sessions$ice_mean # I will change this later to the first value of every dry bout (happens in the activity functions)
 sessions$dist_colony<-subset(modelParamsSub, parameter=="dist_colony")$values # Fixed value
 sessions$pLand_prob<-subset(modelParamsSub, parameter=="pLand")$values # Fixed value
 sessions$c<-sample(subset(modelParamsSub, parameter=="c")$values[[1]], 1) # Sampled at random
-sessions$sst_random_start<-rnorm(mean=sessions$sst_lox_mean, sd=sessions$sst_lox_sd, n=nrow(sessions))
+sessions$sst_random_start<-sessions$sst_lox_mean
 sessions$sst_random_start<-ifelse(sessions$sst_random_start < (-1.9), -1.9, sessions$sst_random_start)
 
 ### Calculate time in activity ####
@@ -201,7 +201,7 @@ actRes$individ_id<-idSub
 tempColony<-dataSpeciesIdSub %>%
 dplyr::select(date_time, sst_col_mean, sst_col_sd) %>%
 dplyr::group_by(date_time) %>%
-dplyr::mutate(sst_random_colony=rnorm(mean=sst_col_mean, sd=sst_col_sd, n=n_distinct(date_time))) %>%
+dplyr::mutate(sst_random_colony=sst_col_mean) %>%
 ungroup() %>%
 dplyr::mutate(date=substr(date_time, 1, 10)) %>%
 dplyr::group_by(date) %>%
