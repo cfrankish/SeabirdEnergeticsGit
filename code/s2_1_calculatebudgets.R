@@ -64,7 +64,7 @@ modelParams$parameter<-rep(c("L1", "Th1", "Th2", "L1_colony", "dist_colony", "pL
 "RMR", "c1", "c2", "c3", "c4", "c5", "TC", "Beta_active", "Beta_rest"), each=6)
 modelParams$values<-list(
 240, 810, 90, 134, 88, 88, # Species-specific flight bout duration (minutes)
-c(seq(0.95, 0.98, 0.01)), c(seq(0.95, 0.98, 0.01)), c(seq(0.84, 0.93, 0.01)), c(seq(0.84, 0.93, 0.01)), c(seq(0.84, 0.93, 0.01)), c(seq(0.84, 0.93, 0.01)), # Th1 % wet threshold for differenciating between behaviors
+0.95, 0.95, c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), # Th1 % wet threshold for differenciating between behaviors
 0, 0, 0, 0, 0, 0, # Th2 #% wet for determing dry vs. intermediate
 c(0, 240), c(0, 810), c(0, 90), c(0, 134), c(0, 88), c(0, 88), # L1_colony: duration of dry bouts at start of tLand that can re-allocated to flight
 500, 500, 500, 500, 500, 500,  # Distance to colony (km) below which it is considered possible to be on land
