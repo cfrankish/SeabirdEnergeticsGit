@@ -1313,7 +1313,7 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
  
   if (species=="Black-legged kittiwake") {
  
-    weightG<-360
+    weightG<-392
     
     if (type =="daily" & type2=="ind") {
       
@@ -1331,7 +1331,7 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
   
   if (species=="Northern fulmar") {
     
-	weightG<-700
+	weightG<-728
     
     if (type =="daily"& type2=="ind") {
       
@@ -1349,8 +1349,8 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
   
   if (species=="Common guillemot") {
     
-    CostDivider<-989 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-950
+    CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
+	weightG<-940
     
     if (type =="daily" & type2=="ind") {
       
@@ -1368,8 +1368,8 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
   
   if (species=="Brünnich's guillemot") {
     
-    CostDivider<-989 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-950
+    CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
+	weightG<-980
     
     if (type =="daily" & type2=="ind") {
       
@@ -1387,7 +1387,7 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
   
   if (species=="Little auk") {
     
-    CostDivider<-989 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
+    CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
 	weightG<-149
     
     if (type =="daily" & type2=="ind") {
@@ -1406,8 +1406,8 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
   
   if (species=="Atlantic puffin") {
     
-    CostDivider<-989 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-450
+    CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
+	weightG<-395
     
     if (type =="daily" & type2=="ind") {
       
