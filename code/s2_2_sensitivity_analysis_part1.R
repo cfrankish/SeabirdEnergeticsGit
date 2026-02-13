@@ -55,10 +55,10 @@ list.activity.meta<-list.files("./data/metadata/", full.names=TRUE)
 
 # Determine model parameters to choose from #
 speciesNo<-6
-paramNo<-15
+paramNo<-16
 modelParams<-tibble(species=rep(c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin", "Little auk", "Common guillemot", "Brünnich's guillemot"), paramNo))
 modelParams$parameter<-rep(c("L1", "Th1", "Th2", "L1_colony", "dist_colony", "pLand_prob", "c",
-"RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest"), each=6)
+"RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest", "LCT"), each=speciesNo)
 modelParams$values<-list(
 c(240, 240-240*0.1, 240+240*0.1), c(810, 810-0.1*810, 810 + 0.1*810), c(90, 90-0.1*90, 90+0.1*90), c(134, 134-0.1*134, 134+0.1*134), c(88, 88-0.1*88, 88+0.1*88), c(88, 88-0.1*88, 88+0.1*88), # Species-specific flight bout duration (minutes)
 c(0.95, 0.92, 0.98), c(0.95, 0.92, 0.98), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), # Th1 % wet threshold for differenciating between behaviors
@@ -79,7 +79,8 @@ c(0), c(0), c(118, 118-118*0.1, 118 + 118*0.1),  # Intercepts of resting metabol
 c(118, 118-118*0.1, 118 + 118*0.1), c(118, 118-118*0.1, 118 + 118*0.1), c(118, 118-118*0.1, 118 + 118*0.1),
 c(1.87, 1.87-1.87*0.1, 1.87 + 1.87*0.1), c(1.34, 1.34-1.34*0.1, 1.34+1.34*0.1),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
 c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1), c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1),
-c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1), c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1))
+c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1), c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1),
+c(12.5, 10.2, 27.8), c(9, 8.63, 24.8), c(14.18, 10.7, 27.8), c(14.18, 13, 24.5), c(14.18, 9.22, 25.3), c(14.18, 7.63, 23.4)) # LCT
 
 #### Step 2: estimate winter activity & energy budgets ####
 
@@ -442,7 +443,7 @@ actRes$TC<-subset(modelParamsSub, parameter=="TC")$values[[1]][[1]] # Choose at 
 actRes$Beta_active<-subset(modelParamsSub, parameter=="Beta_active")$values[[1]][[1]] # Choose at random from uniform distribution
 actRes$Beta_rest<-subset(modelParamsSub, parameter=="Beta_rest")$values[[1]][[1]] # Choose at random from uniform distribution
 
-if (paramNamesFinal[i] %in% c("RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest")) {
+if (paramNamesFinal[i] %in% c("RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest", "LCT")) {
 
 # Cycle through the different values we are trying out!
 actRes[[paramNamesFinal[i]]]<-mean(subset(modelParamsSub, parameter==paramNamesFinal[i])$values[[1]][j][[1]])
@@ -474,6 +475,7 @@ energyDaily$TC<-actRes$TC[1]
 energyDaily$Beta_active<-actRes$Beta_active[1]
 energyDaily$Beta_rest<-actRes$Beta_rest[1]
 energyDaily$year<-yearSave
+energyDaily$LCT<-actRes$LCT[1]
 
 # Add modelling information
 energyDaily$Parameter<-paramNamesFinal[i] # Parameter being tested

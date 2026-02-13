@@ -58,10 +58,10 @@ list.activity.meta<-list.files("./data/metadata/", full.names=TRUE)
 
 # Determine model parameters to choose from #
 speciesNo<-6
-paramNo<-16
+paramNo<-17
 modelParams<-tibble(species=rep(c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin", "Little auk", "Common guillemot", "Brünnich's guillemot"), paramNo))
 modelParams$parameter<-rep(c("L1", "Th1", "Th2", "L1_colony", "dist_colony", "pLand", "c",
-"RMR", "c1", "c2", "c3", "c4", "c5", "TC", "Beta_active", "Beta_rest"), each=6)
+"RMR", "c1", "c2", "c3", "c4", "c5", "TC", "Beta_active", "Beta_rest", "LCT"), each=speciesNo)
 modelParams$values<-list(
 240, 810, 90, 134, 88, 88, # Species-specific flight bout duration (minutes)
 0.95, 0.95, c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), # Th1 % wet threshold for differenciating between behaviors
@@ -84,7 +84,8 @@ c(0), c(0), c(seq(118-118*0.1, 118 + 118*0.1, 1)),  # Intercepts of resting meta
 c(seq(118-118*0.1, 118 + 118*0.1, 1)), c(seq(118-118*0.1, 118 + 118*0.1, 1)), c(seq(118-118*0.1, 118 + 118*0.1, 1)),
 c(seq(1.87-1.87*0.1, 1.87 + 1.87*0.1, 1)), c(seq(1.34-1.34*0.1, 1.34+1.34*0.1, 1)),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
 c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)), c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)),
-c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)), c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)))
+c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)), c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)),
+12.5, 9, 14.18, 14.18, 14.18, 14.18) # LCT in water
 
 #### Step 2: estimate winter activity & energy budgets ####
 
@@ -290,7 +291,7 @@ actRes$c4<-sample(subset(modelParamsSub, parameter=="c4")$values[[1]], 1) # Choo
 actRes$TC<-sample(subset(modelParamsSub, parameter=="TC")$values[[1]], 1) # Choose at random from uniform distribution
 actRes$Beta_active<-sample(subset(modelParamsSub, parameter=="Beta_active")$values[[1]], 1) # Choose at random from uniform distribution
 actRes$Beta_rest<-sample(subset(modelParamsSub, parameter=="Beta_rest")$values[[1]], 1) # Choose at random from uniform distribution
-
+actRes$LCT<-subset(modelParamsSub, parameter=="LCT")$values[[1]] # Choose the number
 	  
 ### Calculate energetics (monthly) ####
 print("Calculating energetics")

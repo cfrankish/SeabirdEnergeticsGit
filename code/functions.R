@@ -1297,6 +1297,7 @@ print(paste0("c4 = ", data$c4[1]))
 print(paste0("TC = ", data$TC[1]))
 print(paste0("Beta_active = ", data$Beta_active[1]))
 print(paste0("Beta_rest = ", data$Beta_rest[1]))
+print(paste0("LCT = ", data$LCT[1]))
 
 # Determine sessions to loop through
 sessionNo<-unique(data$session_id)
@@ -1478,7 +1479,7 @@ calculateEnergetics_BLK_daily<-function(data, weightG) {
   TCx<-(((TCCoef*cf/1000)*365)/365^0.717)*weightG^0.717
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-12.5 # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  LCT<-data$LCT # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
   restConstant1x<-(LCT*TCx + restConstant2x)
   
   # Calculate energetics
@@ -1535,7 +1536,7 @@ calculateEnergetics_BLK_daily_map<-function(data, weightG, sstVals) {
   TCx<-(((TCCoef*cf/1000)*365)/365^0.717)*weightG^0.717
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-12.5 # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  LCT<-data$LCT # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
   restConstant1x<-(LCT*TCx + restConstant2x)
   
   # Turn SST raster into a data frame
@@ -1615,7 +1616,7 @@ calculateEnergetics_NF_daily<-function(data, weightG) {
   TCx<-(((TCCoef*cf/1000)*651)/651^0.765)*weightG^0.765
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-9 # Gabrielsen et al. 1988
+  LCT<-data$LCT # Gabrielsen et al. 1988
   restConstant1x<-(LCT*TCx + restConstant2x)
   
   # Calculate energetics
@@ -1689,7 +1690,7 @@ calculateEnergetics_NF_daily_map<-function(data, weightG, sstVals) {
   TCx<-(((TCCoef*cf/1000)*651)/651^0.765)*weightG^0.765
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-9 # Gabrielsen et al. 1988
+  LCT<-data$LCT # Gabrielsen et al. 1988
   restConstant1x<-(LCT*TCx + restConstant2x)
   
   # Turn SST raster into a data frame
@@ -1768,7 +1769,7 @@ calculateEnergetics_CoGu_daily<-function(data, CostDivider, weightG) {
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -1844,7 +1845,7 @@ calculateEnergetics_CoGu_daily_map<-function(data, CostDivider, weightG, sstVals
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -1923,7 +1924,7 @@ calculateEnergetics_BrGu_daily<-function(data, CostDivider, weightG) {
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -2000,7 +2001,7 @@ calculateEnergetics_BrGu_daily_map<-function(data, CostDivider, weightG, sstVals
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -2082,7 +2083,7 @@ calculateEnergetics_LiA_daily<-function(data, CostDivider,  weightG) {
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -2160,7 +2161,7 @@ calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals)
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -2240,7 +2241,7 @@ calculateEnergetics_AP_daily<-function(data, CostDivider, weightG) {
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
@@ -2317,7 +2318,7 @@ calculateEnergetics_AP_daily_map<-function(data,  CostDivider, weightG, sstVals)
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-14.18
+  LCT<-data$LCT
   restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
   activeConstant_adjust<-activeConstant - LCT*TC_Constant
   
