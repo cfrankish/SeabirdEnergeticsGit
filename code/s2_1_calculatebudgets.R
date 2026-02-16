@@ -77,14 +77,14 @@ c(seq(0.05, 1.1, 0.1)), c(0.8), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), 
 c(seq(0.1, 2.8, 0.1)), c(2), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c4 is the cost of resting on the water...
 c(0), c(0), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), # c5 is the cost of being active on water when thermoneutral...(currently made in the code)
 c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), 
-c(seq(0.0997-0.1*0.0997, 0.0997 + 0.1*0.0997, 0.01)), c(seq(0.07-0.1*0.07, 0.07 + 0.1*0.07, 0.01)), # TC is thermal conductivity (code is TC - 1.96*TCError)
-c(seq(2.75-0.1*2.75, 2.75 + 0.1*2.75, 0.01)), c(seq(2.75-0.1*2.75, 2.75 + 0.1*2.75, 0.01)),
-c(seq(2.75-0.1*2.75, 2.75 + 0.1*2.75, 0.01)), c(seq(2.75-0.1*2.75, 2.75 + 0.1*2.75, 0.01)),
-c(0), c(0), c(seq(118-118*0.1, 118 + 118*0.1, 1)),  # Intercepts of resting metabolic rate at 0°C during different activities (active)
-c(seq(118-118*0.1, 118 + 118*0.1, 1)), c(seq(118-118*0.1, 118 + 118*0.1, 1)), c(seq(118-118*0.1, 118 + 118*0.1, 1)),
-c(seq(1.87-1.87*0.1, 1.87 + 1.87*0.1, 1)), c(seq(1.34-1.34*0.1, 1.34+1.34*0.1, 1)),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
-c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)), c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)),
-c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)), c(seq(72.2-72.2*0.1, 72.2 + 72.2*0.1, 0.1)),
+c(0.0997), c(0.07)), # TC is thermal conductivity (code is TC - 1.96*TCError)
+c(2.75), c(2.75),
+c(2.75), c(2.75),
+c(0), c(0), c(118),  # Intercepts of resting metabolic rate at 0°C during different activities (active)
+c(118), c(118), c(118),
+c(1.87), c(1.34),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
+c(72.2), c(72.2),
+c(72.2), c(72.2),
 12.5, 9, 14.18, 14.18, 14.18, 14.18) # LCT in water
 
 #### Step 2: estimate winter activity & energy budgets ####
