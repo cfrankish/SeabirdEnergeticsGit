@@ -32,6 +32,7 @@ library(lmerTest)
 library(cluster)
 library(ggrepel)
 library(tibble)
+library(rstatix)
 
 args <- commandArgs(trailingOnly = TRUE) # This allows R to read in arguments written in the workflow file
 
@@ -228,6 +229,8 @@ for (i in 1:reps) {
 	speciesNB_stats6$popTest_nbcosts_pval<-pvaltest # Would be good to conduct a post-hoc test later to determine which populations are different
 	speciesNB_stats6$popTest_nbcosts_df<-df 
 	speciesNB_stats6$popTest_nbcosts_H<-H 
+	effSize<-kruskal_effsize(data=speciesNB_stats6, formula=totalDEE ~ colony) # Calculate effect size
+	speciesNB_stats6$popTest_nbcosts_effectSize<-effSize$effsize
 	
     # Stats # 2: Does deviance differ between populations
 	
@@ -260,6 +263,8 @@ for (i in 1:reps) {
 	speciesNB_stats6$popTest_cov_pval<-pvaltest3 # Would be good to conduct a post-hoc test later to determine which populations are different
     speciesNB_stats6$popTest_cov_df<-df3
     speciesNB_stats6$popTest_cov_H<-H3
+	effSize2<-kruskal_effsize(data=speciesNB_stats6, formula=totCov ~ colony) # Calculate effect size
+	speciesNB_stats6$popTest_cov_effectSize<-effSize2$effsize
 
     # Stats # 3: How are these two linked? 	
     
