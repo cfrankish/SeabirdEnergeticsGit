@@ -301,6 +301,7 @@ for (i in 1:reps) {
 	
 	lm4<-lmer(totalDEE ~ totDeviance + (1|colony), weights=colonyWeights, data=speciesNB_stats6)
 	lm6<-lmer(totalDEE ~ totCov + (1|colony), weights=colonyWeights, data=speciesNB_stats6)
+	lm6_2<-lmer(totalDEE ~ totCov + (1|colony), data=speciesNB_stats6)
     
     # Extract coefficients
     lm1_sum<-summary(lm1)
@@ -538,11 +539,33 @@ for (i in 1:reps) {
       rename(predictor_val=totCov)
 	sum6$intercept<-coefficients(lm6_sum)[1,1]
 	sum6$coefficient<-coefficients(lm6_sum)[2,1]
+	sum6$type<-"Weights"
+	
+	devianceWeekly$totCov<-devianceWeekly$covDEE
+	lm6_sum2<-summary(lm6_2)
+    lm6_sum6_2<-data.frame(coefficients(lm6_sum2))
+    sum6_2<-data.frame(totCov=seq(min(devianceWeekly$covDEE), max(devianceWeekly$covDEE), 0.5))
+	sum6_2$colony<-speciesNB_stats6$colony[1]
+    sum6_2$fit<-predict(lm6_2, newdata=sum6_2, re.form=NA)
+	se<-predict(lm6_2, newdata=sum6_2, re.form=NA, se.fit=TRUE)
+	sum6_2$se<-se$se.fit
+    sum6_2$r2<-lm6_sum2$r.squared
+    r2_values <- r.squaredGLMM(lm6_2)
+    sum6_2$r2<-r2_values[1]
+    sum6_2$rep<-speciesNB_stats6$rep[1]
+    sum6_2$species<-speciesNB_stats6$species[1]
+    sum6_2$predictor<-"totCov"
+    sum6_2$pvalue<-lm6_sum6_2$Pr...t..[2]
+    sum6_2<-sum6_2%>%
+      rename(predictor_val=totCov)
+	sum6_2$intercept<-coefficients(lm6_sum2)[1,1]
+	sum6_2$coefficient<-coefficients(lm6_sum2)[2,1]
+	sum6_2$type<-"NoWeights"
     
     # Collate results
     lmRes<-rbind(sum4)
 	lmRes2<-rbind(sum1, sum2, sum3, sum5, sum7, sum8, sum9, sum10, sum11, sum12)
-	lmRes3<-rbind(sum6) # COV option (testing)
+	lmRes3<-rbind(sum6, sum6_2) # COV option (testing)
 	
     # Save results of models
     lmRes_reps<-rbind(lmRes_reps, lmRes)
