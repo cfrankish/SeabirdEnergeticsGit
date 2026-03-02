@@ -6,7 +6,7 @@
 
 ### Step 1 extracts & processes immersion data:
 - `S1_1_extract_wetdry.R`: this step does NOT work in parallel yet. I have to run in the front-end. By species, the script extracts immersion data from the SEATRACK database. It then retains tracks with IDs that are in the IRMA data, removes tracks with weird sampling intervals & juveniles. This step outputs species-specific files ('species_wetdry_date.csv') which are backed-up locally.
-- `S1_2_downloadSST_underConstruction.R`: this step is meant to donwload SST data automatically from COPERNICUS but I can't get this working on SAGA. Instead I have uploaded monthly SST files myself from my pc. These were downloaded using the script called `s4_environmental_data.R`
+- `S1_2_downloadSST.R`: this step downloads SST, sea ice and air temp data from COPERNICUS. I can't get it to work on SAGA, so you have to download the wetdry data locally, extract the data and then upload it to the cluster afterwards. 
 - `S1_3_merge_wetdry_lox_env.R`: merges immersion, location and environmental data by individual bird. Each 10-mins of data is also assigned day/night/twilight. Files are split into individual files stored in 'birddata_raw/speciesname/id.csv'
   
 ### Step 2 calculates daily activity budgets and energy expenditure:
