@@ -80,6 +80,7 @@ irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Bl
 # Determine location of environmental data 
 lox.ice<-list.files("./data/ice/", full.names=TRUE)
 lox.sst<-list.files("./data/sst/", full.names=TRUE)
+lox.air<-list.files("./data/temp/", full.names=TRUE)
 lox.distance<-list.files("./data/distCoast/", full.names=TRUE) # I don't think I am using this anymore but just in case
 
 # Summarise existing colonies
@@ -240,6 +241,12 @@ iceRast<-rast(lox.ice[grepl(paste0(monthyearSub$year_month[1], ".nc"), lox.ice)]
 crs(iceRast)<-projection_84
 iceProj<-project(iceRast, distCoast)
 
+# Find relevant air temp info
+airRast<-rast(lox.air[grepl(paste0(monthyearSub$year_month[1], ".nc"), lox.air)])
+values(airRast)<-values(airRast) - 273 # to change from kelvin to degrees C
+crs(airRast)<-projection_84
+airProj<-project(airRast, distCoast)
+
 # Project Bird coordinates
 coordinates(monthyearSub)<-~lon + lat
 projection(monthyearSub)<-projection_84
@@ -291,6 +298,16 @@ iceVals_mean<-iceVals %>%
 loxdf$ice_mean<-iceVals_mean$ice_mean
 loxdf$ice_sd<-iceVals_mean$ice_sd
 
+airVals<-terra::extract(airProj, lox_sf)
+colnames(airVals)<-c("ID", "temp")
+airVals_mean<-airVals %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(air_mean=mean(temp, na.rm=TRUE), air_sd=sd(temp, na.rm=TRUE)) %>%
+  ungroup() %>%
+  dplyr::select(air_mean, air_sd)
+loxdf$air_mean<-airVals_mean$air_mean
+loxdf$air_sd<-airVals_mean$air_sd
+
 distVals<-terra::extract(distCoast, lox_sf)
 distVals_mean<-distVals %>%
   dplyr::group_by(ID) %>%
@@ -301,15 +318,107 @@ loxdf$distCoastKm_mean<-distVals_mean$dist_mean
 loxdf$distCoastKm_sd<-distVals_mean$dist_sd
 
 # Check no Nas in all this
+na0<-subset(loxdf, is.na(sst_col_mean))
 na1<-subset(loxdf, is.na(sst_lox_mean))
 na2<-subset(loxdf, is.na(ice_mean))
+na3<-subset(loxdf, is.na(air_mean))
 
-if(nrow(na1)>0) {
-  stop(print("NAs in sst layer"))
+if(nrow(na0)>0) {
+  stop(print("NAs in colony SST layer"))
+}
+
+# Identify rows with NA
+na_idx <- which(is.na(loxdf$sst_lox_mean))
+
+loxdf$bufferSize_sst<-NA
+
+if(length(na_idx)>0) {
+
+print("NAs in sst layer...re-extracting...")
+
+distBuffer<-0
+
+repeat {
+
+distBuffer<-distBuffer + 50000
+
+print(distBuffer)
+
+# Buffer ONLY NA features
+buffered_lox <- st_buffer(lox_sf[na_idx, ], dist = distBuffer)
+
+# Extract only for those features
+sstVals <- terra::extract(sstProj, buffered_lox)
+
+sstVals_mean <- sstVals %>%
+      dplyr::group_by(ID) %>%
+      dplyr::summarise(
+        sst_mean = mean(sst, na.rm = TRUE),
+        sst_sd   = sd(sst, na.rm = TRUE)
+      )
+  
+# Replace ONLY NA rows
+loxdf$sst_lox_mean[na_idx] <- sstVals_mean$sst_mean
+loxdf$sst_lox_sd[na_idx]   <- sstVals_mean$sst_sd
+loxdf$bufferSize_sst[na_idx] <- distBuffer[1]
+
+# Recalculate which rows are still NA
+na_idx <- which(is.na(loxdf$sst_lox_mean))
+
+if (length(na_idx)==0) {
+break
+}
+
+}
+ 
 }
 
 if(nrow(na2)>0) {
-  stop(print("NAs in ice layer"))
+
+# Identify rows with NA
+na_idx2 <- which(is.na(loxdf$ice_mean))
+
+print("NAs in ice layer...re-extracting...")
+
+distBuffer<-0
+
+repeat {
+
+distBuffer<-distBuffer + 50000
+
+print(distBuffer)
+
+# Buffer ONLY NA features
+buffered_lox <- st_buffer(lox_sf[na_idx2, ], dist = distBuffer)
+
+# Extract only for those features
+iceVals <- terra::extract(iceProj, buffered_lox)
+
+iceVals_mean <- iceVals %>%
+      dplyr::group_by(ID) %>%
+      dplyr::summarise(
+        ice_mean = mean(siconc, na.rm = TRUE),
+        ice_sd   = sd(siconc, na.rm = TRUE)
+      )
+  
+# Replace ONLY NA rows
+loxdf$ice_mean[na_idx2] <- iceVals_mean$ice_mean
+loxdf$ice_sd[na_idx2]   <- iceVals_mean$ice_sd
+
+# Recalculate which rows are still NA
+na_idx2 <- which(is.na(loxdf$ice_mean))
+
+if (length(na_idx2)==0) {
+break
+}
+
+}
+ 
+}
+
+
+if(nrow(na3)>0) {
+  stop(print("NAs in air temp layer"))
 }
 
 # Add colony locations
@@ -321,7 +430,7 @@ loxdf_col<-bind_cols(loxdf, colonySub)
 # Add distance to colony
 loxdf_col<-loxdf_col %>%
   dplyr::select(individ_id:colony, col_lon, col_lat)
-distanceCol<-rdist.earth(x1=as.matrix(loxdf_col[,6:7]), x2=as.matrix(loxdf_col[,21:22]), miles=FALSE) 
+distanceCol<-rdist.earth(x1=as.matrix(loxdf_col[,6:7]), x2=as.matrix(loxdf_col[,24:25]), miles=FALSE) 
 loxdf_col$distColonyKm<-diag(distanceCol)
 
 # save to ID list
