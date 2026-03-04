@@ -792,8 +792,8 @@ methodCaitlin<-function(data, irmaData, speciesLatin) {
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random>1, 1, ice_random)) %>%
 	dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Make this null if species does not stand on ice
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo) & distCoast_random<0, 0, distCoast_random)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo) & distCoast_random<0, 0, distCoast_random)) %>%
     # Determine whether the bird could have been on land or not (PossLand)
     dplyr::mutate(PossLand=ifelse( ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <= dist_colony, 1, 0)) %>%
 	# Change this to zero if prop night that is dry is not equal to 1
@@ -848,8 +848,8 @@ methodCaitlin<-function(data, irmaData, speciesLatin) {
     dplyr::mutate(ice_random=ifelse(ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(ice_random>1, 1, ice_random)) %>%
 	dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Change this to zero if species is incorrect
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
-    dplyr::mutate(distCoast_random=ifelse(distCoast_random<0, 0, distCoast_random)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(distCoast_random<0, 0, distCoast_random)) %>%
     # Determine whether it was possible for the bird to be on land or not (PossLand)
     dplyr::mutate(PossLand=ifelse(ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <=dist_colony, 1, 0)) %>%
     # Generate random probabilities which will be used to determine whether bird is on land or not (pLand)
@@ -1131,8 +1131,8 @@ daily_max_flightBout<-daily_max_flightBout_temp %>%
     dplyr::mutate(sstRandom=ifelse(sstRandom < -1.9, 1.9, sstRandom)) %>%
     dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater1=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tActive=sum(Active)*10/60, tLand=sum(Land)*10/60,
                      tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
-                     sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat),
-					 boutsRandom=(sum(RandomAllocation)/144)) %>%
+                     sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat),
+					 boutsRandom=(sum(RandomAllocation)/144), immersionType=mean(max.cond)) %>%
     ungroup() %>%
     dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
     dplyr::group_by(date) %>%
@@ -1159,7 +1159,7 @@ daily_max_flightBout<-daily_max_flightBout_temp %>%
     dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater1=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tActive=sum(Active)*10/60, tLand=sum(Land)*10/60,
                      tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
                      sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat),
-                     c=sample(seq(1.5, 3, 0.1), 1)) %>%
+                     c=sample(seq(1.5, 3, 0.1), 1), immersionType=mean(max.cond), air_random=mean(air_mean)) %>%
     rename(tRestWater=tRestWater1)
   
   # Save results from Both
@@ -3881,3 +3881,66 @@ dplyr::mutate(patches=ids)
 return(polysFinal)
 
 }
+
+### Extract LCT_air ####
+
+# Here we extract air temp for some locations #
+
+extract_air_temp<-function(data) {
+
+# Determine location of air temp files
+airTemp<-data.frame(Files=list.files("../data/temp/", full.names=TRUE))
+airTemp$year<-sub("^[^_]+_([^_]+)_.*", "\\1", airTemp$Files)
+airTemp$month<-sub(".*_(\\d+)\\.nc$", "\\1", airTemp$Files)
+
+# First we determine unique months/year #
+data$month<-as.numeric(substr(data$date, 6, 7))
+data$year<-as.numeric(substr(data$date, 1, 4))
+uniqueDates<-data %>%
+dplyr::group_by(year) %>%
+dplyr::count(month)
+
+# now we extract this information row by row
+
+dataSaveAll<-list()
+
+print("Extracting data for date...")
+
+for (j in 1:nrow(uniqueDates)) {
+
+print(paste0(j, "/", nrow(uniqueDates)))
+
+# subset the correct raster file #
+airTempSub<-subset(airTemp, month==uniqueDates[j,]$month & year==uniqueDates[j,]$year)
+
+# open the raster
+#print(airTempSub$Files[1])
+airTempRast<-terra::rast(airTempSub$Files[1])
+#print("Opened raster")
+
+# Change temp from kelvin to degrees
+airTempRastCelcius <- airTempRast - 273.15
+
+# Subset these months/years in the dataset
+dataExtract<-subset(data, month==uniqueDates[j,]$month & year==uniqueDates[j,]$year)
+coordinates<-data.frame(lon=dataExtract$mean.lon, lat=dataExtract$mean.lat)
+
+# Extract corresponding air temp values
+airTempValues<-terra::extract(airTempRastCelcius, coordinates)
+colnames(airTempValues)<-c("row", "airTemp")
+
+# Add this information to the main data frame
+dataSave<-dataExtract %>%
+dplyr::mutate(airTemp=airTempValues$airTemp)
+
+dataSaveAll<-rbind(dataSaveAll, dataSave)
+
+}
+
+return(dataSaveAll)
+
+}
+
+
+
+

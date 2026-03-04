@@ -58,10 +58,10 @@ list.activity.meta<-list.files("./data/metadata/", full.names=TRUE)
 
 # Determine model parameters to choose from #
 speciesNo<-6
-paramNo<-17
+paramNo<-19
 modelParams<-tibble(species=rep(c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin", "Little auk", "Common guillemot", "Brünnich's guillemot"), paramNo))
 modelParams$parameter<-rep(c("L1", "Th1", "Th2", "L1_colony", "dist_colony", "pLand", "c",
-"RMR", "c1", "c2", "c3", "c4", "c5", "TC", "Beta_active", "Beta_rest", "LCT"), each=speciesNo)
+"RMR", "c1", "c2", "c3", "c4", "c5", "TC_water", "Beta_active", "Beta_rest", "LCT_water", "TC_air", "LCT_air"), each=speciesNo)
 modelParams$values<-list(
 240, 810, 90, 134, 88, 88, # Species-specific flight bout duration (minutes)
 0.95, 0.95, c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), # Th1 % wet threshold for differenciating between behaviors
@@ -77,7 +77,7 @@ c(seq(0.05, 1.1, 0.1)), c(0.8), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), 
 c(seq(0.1, 2.8, 0.1)), c(2), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c4 is the cost of resting on the water...
 c(0), c(0), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), # c5 is the cost of being active on water when thermoneutral...(currently made in the code)
 c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), 
-c(0.0997), c(0.07)), # TC is thermal conductivity (code is TC - 1.96*TCError)
+c(0.0997), c(0.07), # TC is thermal conductivity (code is TC - 1.96*TCError)
 c(2.75), c(2.75),
 c(2.75), c(2.75),
 c(0), c(0), c(118),  # Intercepts of resting metabolic rate at 0°C during different activities (active)
@@ -85,7 +85,9 @@ c(118), c(118), c(118),
 c(1.87), c(1.34),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
 c(72.2), c(72.2),
 c(72.2), c(72.2),
-12.5, 9, 14.18, 14.18, 14.18, 14.18) # LCT in water
+12.5, 9, 14.18, 14.18, 14.18, 14.18, # LCT in water
+0.0466, 0.0336, 0.0282, 0.05, 0.0282, 0.0282, # TC in air
+4.5, 9, 5.72, 4.5, 2, 2) # LCt in air
 
 #### Step 2: estimate winter activity & energy budgets ####
 
@@ -261,7 +263,7 @@ actResMonth<-sstJoin %>%
   dplyr::summarise(tForage_month=sum(tForage), tLand_month=sum(tLand), tFlight_month=sum(tFlight), tRestWater_month=sum(tRestWater), tActive_month=sum(tActive), sstMonth=mean(sst_random, na.rm=TRUE), dayLength=mean(dayLengthHrs), MaxDistColKm=max(MaxDistColKm),
                    EnergyDiveTotMonth=sum(EnergyDiveTot), totDays=n_distinct(date), PropForage=tForage_month/(totDays*24), PropFlight=tFlight_month/(totDays*24),
                    PropActive=tActive_month/(totDays*24), PropLand=tLand_month/(totDays*24), PropRest=tRestWater_month/(totDays*24), maxFlight=max(maxFlightBoutsMins, na.rm=TRUE),
-                   iceMonth=mean(ice_random, na.rm=TRUE), distColKmMonth=mean(distColonyKm_mean)) %>%
+                   iceMonth=mean(ice_random, na.rm=TRUE), airMonth=mean(air_random, na.rm=TRUE), distColKmMonth=mean(distColonyKm_mean)) %>%
   ungroup() %>%
   dplyr::mutate(propTot=PropLand + PropActive + PropForage + PropRest + PropFlight)
 
@@ -288,10 +290,12 @@ actRes$RMR<-sample(subset(modelParamsSub, parameter=="RMR")$values[[1]], 1) # ch
 actRes$c1<-sample(subset(modelParamsSub, parameter=="c1")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c3<-sample(subset(modelParamsSub, parameter=="c3")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c4<-sample(subset(modelParamsSub, parameter=="c4")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$TC<-sample(subset(modelParamsSub, parameter=="TC")$values[[1]], 1) # Choose at random from uniform distribution
+actRes$TC_air<-sample(subset(modelParamsSub, parameter=="TC_air")$values[[1]], 1) # Choose at random from uniform distribution
+actRes$TC_water<-sample(subset(modelParamsSub, parameter=="TC_water")$values[[1]], 1) # Choose at random from uniform distribution
 actRes$Beta_active<-sample(subset(modelParamsSub, parameter=="Beta_active")$values[[1]], 1) # Choose at random from uniform distribution
 actRes$Beta_rest<-sample(subset(modelParamsSub, parameter=="Beta_rest")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$LCT<-subset(modelParamsSub, parameter=="LCT")$values[[1]] # Choose the number
+actRes$LCT_air<-subset(modelParamsSub, parameter=="LCT_air")$values[[1]] # Choose the number
+actRes$LCT_water<-subset(modelParamsSub, parameter=="LCT_water")$values[[1]] # Choose the number
 	  
 ### Calculate energetics (monthly) ####
 print("Calculating energetics")
