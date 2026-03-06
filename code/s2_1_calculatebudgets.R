@@ -290,10 +290,10 @@ actRes$RMR<-sample(subset(modelParamsSub, parameter=="RMR")$values[[1]], 1) # ch
 actRes$c1<-sample(subset(modelParamsSub, parameter=="c1")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c3<-sample(subset(modelParamsSub, parameter=="c3")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c4<-sample(subset(modelParamsSub, parameter=="c4")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$TC_air<-sample(subset(modelParamsSub, parameter=="TC_air")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$TC_water<-sample(subset(modelParamsSub, parameter=="TC_water")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$Beta_active<-sample(subset(modelParamsSub, parameter=="Beta_active")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$Beta_rest<-sample(subset(modelParamsSub, parameter=="Beta_rest")$values[[1]], 1) # Choose at random from uniform distribution
+actRes$TC_air<-subset(modelParamsSub, parameter=="TC_air")$values[[1]] # Choose at random from uniform distribution
+actRes$TC_water<-subset(modelParamsSub, parameter=="TC_water")$values[[1]] # Choose at random from uniform distribution
+actRes$Beta_active<-subset(modelParamsSub, parameter=="Beta_active")$values[[1]] # Choose at random from uniform distribution
+actRes$Beta_rest<-subset(modelParamsSub, parameter=="Beta_rest")$values[[1]] # Choose at random from uniform distribution
 actRes$LCT_air<-subset(modelParamsSub, parameter=="LCT_air")$values[[1]] # Choose the number
 actRes$LCT_water<-subset(modelParamsSub, parameter=="LCT_water")$values[[1]] # Choose the number
 	  
@@ -319,7 +319,8 @@ energyDaily$c2<-actRes$c2[1]
 energyDaily$c3<-actRes$c3[1]
 energyDaily$c4<-actRes$c4[1] # This is equal to c3 for the auks... 
 energyDaily$c5<-actRes$c5[1]
-energyDaily$TC<-actRes$TC[1]
+energyDaily$TC_water<-actRes$TC_water[1]
+energyDaily$TC_air<-actRes$TC_air[1]
 energyDaily$Beta_active<-actRes$Beta_active[1]
 energyDaily$Beta_rest<-actRes$Beta_rest[1]
 

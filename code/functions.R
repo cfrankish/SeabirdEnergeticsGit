@@ -199,9 +199,9 @@ calculateTimeInActivity_BLK<-function(data, irmaData){
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), ice_mean, NA)) %>%
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random>1, 1, ice_random)) %>%
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo) & distCoast_random<0, 0, distCoast_random)) %>%
-    dplyr::mutate(PossLand=ifelse( ice_random >0 | distColonyKm <= dist_colony | distCoast_random <= dist_colony | distColonyKm_next <= dist_colony, 1, 0)) %>%
+   # dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo) & distCoast_random<0, 0, distCoast_random)) %>%
+    dplyr::mutate(PossLand=ifelse( ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <= dist_colony, 1, 0)) %>%
     #dplyr::mutate(NewActivity=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==0, "Flight", NA)) %>%
     #dplyr::mutate(NewActivity=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1, "Land", NewActivity)) %>%
 	dplyr::mutate(NewActivity=ifelse(Activity=="Dry" & flightLengthMins > L1, "Land", NA)) %>%
@@ -348,7 +348,7 @@ calculateTimeInActivity_BLK<-function(data, irmaData){
     dplyr::mutate(sstRandom=ifelse(sstRandom < -1.9, 1.9, sstRandom)) %>%
     dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
                      tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
-                     sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat)) %>%
+                     sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean, na.rm=TRUE), immersionType=mean(max.cond), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat)) %>%
     ungroup() %>%
     dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
     dplyr::mutate(dayLengthHrs=tDaylight) %>%
@@ -447,8 +447,8 @@ stop(print("Error: na in dates"))
     dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), first(ice_random), NA)) %>%
     dplyr::mutate(ice_random=ifelse(ice_random<0, 0, ice_random)) %>%
     dplyr::mutate(ice_random=ifelse(ice_random>1, 1, ice_random)) %>%
-    dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
-    dplyr::mutate(distCoast_random=ifelse(distCoast_random<0, 0, distCoast_random)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(!is.na(BoutNo), rnorm(mean=distCoastKm_mean, sd=distCoastKm_sd, n=n_distinct(BoutNo)),NA)) %>%
+    #dplyr::mutate(distCoast_random=ifelse(distCoast_random<0, 0, distCoast_random)) %>%
     dplyr::mutate(PossLand=ifelse(ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <=dist_colony, 1, 0)) %>%
     dplyr::mutate(p=runif(n=n_distinct(BoutNo))) %>%
     dplyr::mutate(p2=runif(n=n_distinct(BoutNo))) %>%
@@ -613,7 +613,7 @@ dataCalcDay_period<-FlightBoutLengths_final %>%
 		dplyr::mutate(sstRandom=ifelse(sstRandom < -1.9, 1.9, sstRandom)) %>%
 		dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
 						 tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
-						 sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon),
+						 sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean, na.rm=TRUE), immersionType=mean(max.cond), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon),
 						 mean.lat=mean(lat), boutsRandom=(sum(RandomAllocation)/144)) %>%
 		ungroup() %>%
 		dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
@@ -1294,10 +1294,12 @@ print(paste0("c2 = ", data$c2[1]))
 print(paste0("c3 = ", data$c3[1]))
 print(paste0("c4 = ", data$c4[1]))
 #print(paste0("c5 = ", data$c5[1]))
-print(paste0("TC = ", data$TC[1]))
+print(paste0("TC_air = ", data$TC_air[1]))
+print(paste0("TC_water = ", data$TC_water[1]))
 print(paste0("Beta_active = ", data$Beta_active[1]))
 print(paste0("Beta_rest = ", data$Beta_rest[1]))
-print(paste0("LCT = ", data$LCT[1]))
+print(paste0("LCT_water = ", data$LCT_water[1]))
+print(paste0("LCT_air = ", data$LCT_air[1]))
 
 # Determine sessions to loop through
 sessionNo<-unique(data$session_id)
@@ -1445,6 +1447,8 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
 
 calculateEnergetics_BLK_daily<-function(data, weightG) {
   
+  print("Hallo")
+  
   # cf is caloric conversion factor of 20.1 J per mL O2 (Schmidt-Nielsen 1997)
   cf<-20.1
   
@@ -1468,7 +1472,8 @@ calculateEnergetics_BLK_daily<-function(data, weightG) {
   
   # We will make a fake error distribution for beta & TC based on mean errors for other variables which is 29%
   betaCoef<-data$Beta_rest[1]
-  TCCoef<-data$TC[1]
+  TCCoef_water<-data$TC_water[1]
+  TCCoef_air<-data$TC_air[1]
   
   # Account for change in constants
   flightConstantx<-((flightCoef*450)/450^0.717)*weightG^0.717
@@ -1476,22 +1481,26 @@ calculateEnergetics_BLK_daily<-function(data, weightG) {
   forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.717
   landConstantx<-((landCoef*450)/450^0.717)*weightG^0.717
   betax<-(((betaCoef*cf/1000)*365)/365^0.717)*weightG^0.717
-  TCx<-(((TCCoef*cf/1000)*365)/365^0.717)*weightG^0.717
+  TCx_water<-(((TCCoef_water*cf/1000)*365)/365^0.717)*weightG^0.717
+  TCx_air<-(((TCCoef_air*cf/1000)*365)/365^0.717)*weightG^0.717
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-data$LCT # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
-  restConstant1x<-(LCT*TCx + restConstant2x)
+  LCT_water<-data$LCT_water[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  LCT_air<-data$LCT_air[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  restConstant1x<-(LCT_water*TCx_water + restConstant2x)
+  beta_land<-landConstantx + LCT_air*TCx_air
   
   # Calculate energetics
   energySub2<-data %>%
     dplyr::group_by(date) %>%
     #dplyr::mutate(DEEkJ=ifelse(sst_random <= LCT_newRest, flightConstant*tFlight + forageConstant*tForage + (restConstant1 - TC*sst_random)*tRestWater +  landConstant*tLand, flightConstant*tFlight + forageConstant*tForage + restConstant3*tRestWater + landConstant*tLand)) %>%
     dplyr::mutate(DEEkJ_active=0, DEEkJ_active_col=0) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT, (restConstant1x - TCx*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT, (restConstant1x - TCx*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT_water, (restConstant1x - TCx_water*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT_water, (restConstant1x - TCx_water*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
 	dplyr::mutate(DEEkJ_flight=flightConstantx*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=forageConstantx*tForage) %>%
-	dplyr::mutate(DEEkJ_restland=landConstantx*tLand) %>%
+	dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TCx_air)*tLand, landConstantx*tLand)) %>%
+	dplyr::mutate(DEEkJ_restland2=landConstantx*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_rest + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_rest_col + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
@@ -1604,7 +1613,8 @@ calculateEnergetics_NF_daily<-function(data, weightG) {
   betaCoef<-data$Beta_rest[1]
   
   # TCCoef - we assume error is equal to average error of others which in this case is 24%
-  TCCoef<-data$TC[1]
+  TCCoef_water<-data$TC_water[1]
+  TCCoef_air<-data$TC_air[1]
   
   # Account for change in constants
   #flightConstantx<-(7.3*RMR*cf/1000)*weightG
@@ -1613,11 +1623,14 @@ calculateEnergetics_NF_daily<-function(data, weightG) {
   forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.765
   landConstantx<-(((landCoef*RMR*cf/1000)*651)/651^0.765)*weightG^0.765
   betax<-(((betaCoef*cf/1000)*651)/651^0.765)*weightG^0.765
-  TCx<-(((TCCoef*cf/1000)*651)/651^0.765)*weightG^0.765
+  TCx_water<-(((TCCoef_water*cf/1000)*651)/651^0.765)*weightG^0.765
+  TCx_air<-(((TCCoef_air*cf/1000)*651)/651^0.765)*weightG^0.765
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-data$LCT # Gabrielsen et al. 1988
-  restConstant1x<-(LCT*TCx + restConstant2x)
+  LCT_water<-data$LCT_water # Gabrielsen et al. 1988
+  LCT_air<-data$LCT_air # Gabrielsen et al. 1988
+  restConstant1x<-(LCT_water*TCx_water + restConstant2x)
+  beta_land<-landConstantx + TCx_air*LCT_air
   
   # Calculate energetics
   #energySub2<-data %>%
@@ -1635,11 +1648,12 @@ calculateEnergetics_NF_daily<-function(data, weightG) {
     dplyr::group_by(date) %>%
     #dplyr::mutate(DEEkJ=ifelse(sst_random <= LCT_newRest, flightConstant*tFlight + forageConstant*tForage + (restConstant1 - TC*sst_random)*tRestWater +  landConstant*tLand, flightConstant*tFlight + forageConstant*tForage + restConstant3*tRestWater + landConstant*tLand)) %>%
     dplyr::mutate(DEEkJ_active=0, DEEkJ_active_col=0) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT, (restConstant1x - TCx*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT, (restConstant1x - TCx*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT_water, (restConstant1x - TCx_water*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT_water, (restConstant1x - TCx_water*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
 	dplyr::mutate(DEEkJ_flight=flightConstantx*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=forageConstantx*tForage) %>%
-	dplyr::mutate(DEEkJ_restland=landConstantx*tLand) %>%
+	dplyr::mutate(DEEkJ_restland=ifelse(air_random<=LCT_air, (beta_land - air_random*TCx_air)*tLand ,landConstantx*tLand)) %>%
+	dplyr::mutate(DEEkJ_restland2=landConstantx*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_rest + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_rest_col + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
@@ -1741,7 +1755,8 @@ calculateEnergetics_CoGu_daily<-function(data, CostDivider, weightG) {
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -1765,13 +1780,17 @@ calculateEnergetics_CoGu_daily<-function(data, CostDivider, weightG) {
  # activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + TC_air_Constant*LCT_air
   
   # And now we calculate new LCT?
   #LCT_newActive<-(activeConstant-restConstant2)/TC_Constant
@@ -1788,16 +1807,17 @@ calculateEnergetics_CoGu_daily<-function(data, CostDivider, weightG) {
   energySub2<-data %>%
     dplyr::group_by(date) %>%
 	#dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_newActive, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_newActive, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_newRest, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
 	#dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_newRest, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
     dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=0) %>%
-    dplyr::mutate(DEEkJ_restland=landConstant*tLand) %>%
+	dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TC_air_Constant)*tLand, landConstant*tLand)) %>%
+    dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
@@ -1896,7 +1916,8 @@ calculateEnergetics_BrGu_daily<-function(data, CostDivider, weightG) {
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -1917,16 +1938,20 @@ calculateEnergetics_BrGu_daily<-function(data, CostDivider, weightG) {
   # Account for change in constants
   flightConstant<-(flightCoef_kj*convf)*weightG^0.689
   activeConstant<-(activeCoef*convf)*weightG^0.689
-  #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
+ # activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + TC_air_Constant*LCT_air
   
   # And now we calculate new LCT?
   #LCT_newActive<-(activeConstant-restConstant2)/TC_Constant
@@ -1943,16 +1968,17 @@ calculateEnergetics_BrGu_daily<-function(data, CostDivider, weightG) {
   energySub2<-data %>%
     dplyr::group_by(date) %>%
 	#dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_newActive, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_newActive, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_newRest, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
 	#dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_newRest, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
     dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=0) %>%
-    dplyr::mutate(DEEkJ_restland=landConstant*tLand) %>%
+	dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TC_air_Constant)*tLand, landConstant*tLand)) %>%
+    dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
@@ -2054,7 +2080,8 @@ calculateEnergetics_LiA_daily<-function(data, CostDivider,  weightG) {
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -2079,13 +2106,17 @@ calculateEnergetics_LiA_daily<-function(data, CostDivider,  weightG) {
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
   #forageConstant<-(3.64*convother)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*163.7/163.7^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + LCT_air*TC_air_Constant
   
   # And now we calculate new LCT?
   #LCT_newActive<-(activeConstant-restConstant2)/TC_Constant
@@ -2102,16 +2133,17 @@ calculateEnergetics_LiA_daily<-function(data, CostDivider,  weightG) {
   energySub2<-data %>%
     dplyr::group_by(date) %>%
 	#dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_newActive, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_newActive, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_newRest, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
 	#dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_newRest, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
     dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=0) %>%
-    dplyr::mutate(DEEkJ_restland=landConstant*tLand) %>%
+	dplyr::mutate(DEEkJ_restland=ifelse(air_random<=LCT_air, (beta_land - air_random*TC_air_Constant)*tLand, landConstant*tLand)) %>%
+    dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
@@ -2213,7 +2245,11 @@ calculateEnergetics_AP_daily<-function(data, CostDivider, weightG) {
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  
+  # Extract TC on Land
+  TC_air<-data$TC_air[1] # ml O2 hr
+  LCT_air<-data$LCT_air[1] # Degrees c
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -2237,13 +2273,17 @@ calculateEnergetics_AP_daily<-function(data, CostDivider, weightG) {
   #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-(TC_air*20.1/1000)*819.3/(819.3^0.689)*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-restConstant1 - LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  # Calculate a beta_land
+  beta_land<-landConstant + LCT_air*TC_air_Constant
   
   # And now we calculate new LCT?
   #LCT_newActive<-(activeConstant-restConstant2)/TC_Constant
@@ -2260,16 +2300,17 @@ calculateEnergetics_AP_daily<-function(data, CostDivider, weightG) {
   energySub2<-data %>%
     dplyr::group_by(date) %>%
 	#dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_newActive, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_newActive, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
 	#dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_newRest, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
 	#dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_newRest, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
+	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
     dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
     dplyr::mutate(DEEkJ_forage=0) %>%
-    dplyr::mutate(DEEkJ_restland=landConstant*tLand) %>%
+    dplyr::mutate(DEEkJ_restland=ifelse(air_random <=LCT_air, (beta_land - TC_air_Constant*air_random)*tLand ,landConstant*tLand)) %>%
+	dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
 	dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
 	dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
     dplyr::mutate(weight=weightG)
