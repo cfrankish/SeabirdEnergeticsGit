@@ -55,10 +55,10 @@ list.activity.meta<-list.files("./data/metadata/", full.names=TRUE)
 
 # Determine model parameters to choose from #
 speciesNo<-6
-paramNo<-16
+paramNo<-18
 modelParams<-tibble(species=rep(c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin", "Little auk", "Common guillemot", "Brünnich's guillemot"), paramNo))
 modelParams$parameter<-rep(c("L1", "Th1", "Th2", "L1_colony", "dist_colony", "pLand_prob", "c",
-"RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest", "LCT"), each=speciesNo)
+"RMR", "c1", "c2", "c3", "c4", "TC_water", "Beta_active", "Beta_rest", "LCT_water", "TC_air", "LCT_air"), each=speciesNo)
 modelParams$values<-list(
 c(240, 240-240*0.1, 240+240*0.1), c(810, 810-0.1*810, 810 + 0.1*810), c(90, 90-0.1*90, 90+0.1*90), c(134, 134-0.1*134, 134+0.1*134), c(88, 88-0.1*88, 88+0.1*88), c(88, 88-0.1*88, 88+0.1*88), # Species-specific flight bout duration (minutes)
 c(0.95, 0.92, 0.98), c(0.95, 0.92, 0.98), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), c(0.85, 0.90, 0.90), # Th1 % wet threshold for differenciating between behaviors
@@ -80,7 +80,10 @@ c(118, 118-118*0.1, 118 + 118*0.1), c(118, 118-118*0.1, 118 + 118*0.1), c(118, 1
 c(1.87, 1.87-1.87*0.1, 1.87 + 1.87*0.1), c(1.34, 1.34-1.34*0.1, 1.34+1.34*0.1),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
 c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1), c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1),
 c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1), c(72.2, 72.2-72.2*0.1, 72.2 + 72.2*0.1),
-c(12.5, 10.2, 27.8), c(9, 8.63, 24.8), c(14.18, 10.7, 27.8), c(14.18, 13, 24.5), c(14.18, 9.22, 25.3), c(14.18, 7.63, 23.4)) # LCT
+c(12.5, 9.5, 27.8), c(9, 8.63, 24.8), c(14.18, 10.7, 27.8), c(14.18, 9.5, 24.5), c(14.18, 7, 25.3), c(14.18, 7, 23.4),  # LCT water
+c(0.0466, 0.0466-0.1*0.0466, 0.0466 + 0.1*0.0466), c(0.0336, 0.0336-0.1*0.0336, 0.0336+0.0336*0.1), c(0.0282, 0.0282-0.1*0.0282, 0.0282 +0.1*0.0282), # TC air
+c(0.05, 0.05-0.1*0.05, 0.05+0.1*0.05), c(0.0282, 0.0282-0.1*0.0282, 0.0282 +0.1*0.0282), c(0.0282, 0.0282-0.1*0.0282, 0.0282 +0.1*0.0282),
+c(4.5, 4.5, 13.8), c(9, 3.63, 10.8), c(5.72, 5.72, 13.8), c(4.5, 4.5, 10.5), c(2, 2, 11.3), c(2, 2, 9.4)) # LCT air
 
 #### Step 2: estimate winter activity & energy budgets ####
 
@@ -439,11 +442,14 @@ actRes$c1<-subset(modelParamsSub, parameter=="c1")$values[[1]][[1]] # choose at 
 actRes$c2<-mean(subset(modelParamsSub, parameter=="c2")$values[[1]][[1]]) # choose at random from uniform distribution
 actRes$c3<-subset(modelParamsSub, parameter=="c3")$values[[1]][[1]] # choose at random from uniform distribution
 actRes$c4<-subset(modelParamsSub, parameter=="c4")$values[[1]][[1]] # Choose at random from uniform distribution
-actRes$TC<-subset(modelParamsSub, parameter=="TC")$values[[1]][[1]] # Choose at random from uniform distribution
+actRes$TC_water<-subset(modelParamsSub, parameter=="TC_water")$values[[1]][[1]] # Choose at random from uniform distribution
+actRes$TC_air<-subset(modelParamsSub, parameter=="TC_air")$values[[1]][[1]] # Choose at random from uniform distribution
 actRes$Beta_active<-subset(modelParamsSub, parameter=="Beta_active")$values[[1]][[1]] # Choose at random from uniform distribution
 actRes$Beta_rest<-subset(modelParamsSub, parameter=="Beta_rest")$values[[1]][[1]] # Choose at random from uniform distribution
+actRes$LCT_water<-subset(modelParamsSub, parameter=="LCT_water")$values[[1]][[1]] # Choose at random from uniform distribution
+actRes$LCT_air<-subset(modelParamsSub, parameter=="LCT_air")$values[[1]][[1]] # Choose at random from uniform distribution
 
-if (paramNamesFinal[i] %in% c("RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest", "LCT")) {
+if (paramNamesFinal[i] %in% c("RMR", "c1", "c2", "c3", "c4", "TC_water", "Beta_active", "Beta_rest", "LCT_water", "TC_air", "LCT_air")) {
 
 # Cycle through the different values we are trying out!
 actRes[[paramNamesFinal[i]]]<-mean(subset(modelParamsSub, parameter==paramNamesFinal[i])$values[[1]][j][[1]])
@@ -471,11 +477,13 @@ energyDaily$c1<-actRes$c1[1]
 energyDaily$c2<-actRes$c2[1]
 energyDaily$c3<-actRes$c3[1]
 energyDaily$c4<-actRes$c4[1] # This is equal to c3 for the auks... 
-energyDaily$TC<-actRes$TC[1]
+energyDaily$TC_water<-actRes$TC_water[1]
 energyDaily$Beta_active<-actRes$Beta_active[1]
 energyDaily$Beta_rest<-actRes$Beta_rest[1]
 energyDaily$year<-yearSave
-energyDaily$LCT<-actRes$LCT[1]
+energyDaily$LCT_water<-actRes$LCT_water[1]
+energyDaily$LCT_air<-actRes$LCT_air[1]
+energyDaily$TC_air<-actRes$TC_air[1]
 
 # Add modelling information
 energyDaily$Parameter<-paramNamesFinal[i] # Parameter being tested
