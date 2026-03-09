@@ -78,6 +78,22 @@ print("Opening file")
 sensRes<-read.csv(lox.results.loop[i,]$files[1])
 print(sensRes$species[1])
 
+# Find out what the resolution is of the GLS
+birdID<-sensRes$individ_id[1] # Isolate ID
+speciesList<-data.frame(species=c("atlanticpuffin", "blackleggedkittiwake", "commonguillemot", "brunnichsguillemot", "littleauk", "northernfulmar"), speciesMatch=c("Atlantic puffin", "Black-legged kittiwake",
+"Common guillemot", "Brünnich's guillemot", "Little auk", "Northern fulmar")) # Make a list so I can find the original files with metadata
+speciesListSub<-subset(speciesList, speciesMatch==sensRes$species[1]) # Find the correct species
+all_species_files<-list.files(paste0("data/birddata_ind/", speciesListSub$species[1]), full.names=TRUE) # List all original files
+
+birdFile_check<-all_species_files[grep(birdID, all_species_files)] # Here we check whether there is a matching file
+
+if (length(birdFile_check)==1) {
+birdID_file<-read.csv(all_species_files[grep(birdID, all_species_files)], nrow=3) # Find the matching file
+sensRes$immersion_type<-birdID_file$max.cond[1] # Add conductivity sampling rate
+} else {
+sensRes$immersion_type<-"NA"
+}
+
 # Subset to dates of interest
 sensRes$day<-as.numeric(substr(sensRes$date, 9, 10))
 sensRes$month<-as.numeric(substr(sensRes$date, 6, 7))
@@ -107,12 +123,12 @@ dplyr::filter(weekNo>0) %>% # remove first & last buffer days
 ungroup() %>%
 dplyr::left_join(species, by=c("species")) %>%
 dplyr::mutate(DEE=DEEkJ/weight^allometryCoef) %>%
-dplyr::group_by(species, colony, individ_id, Parameter, Run, weekNo, L1, Th1, Th2, L1_colony_min, L1_colony_max, dist_colony, pLand_prob, c, RMR, 
-c1, c2, c3, c4, TC, Beta_active, Beta_rest, year) %>%
+dplyr::group_by(species, colony, individ_id, immersion_type, Parameter, Run, weekNo, L1, Th1, Th2, L1_colony_min, L1_colony_max, dist_colony, pLand_prob, c, RMR, 
+c1, c2, c3, c4, TC_water, TC_air, Beta_active, Beta_rest, LCT_water, LCT_air, year) %>%
 dplyr::summarize(weeklyDEE=sum(DEE), tFlight=sum(tFlight), tForage=sum(tForage), tActive=sum(tActive), tLand=sum(tLand), tRestWater=sum(tRestWater)) %>%
 dplyr::ungroup() %>%
-dplyr::group_by(species, colony, individ_id, Parameter, Run, L1, Th1, Th2, L1_colony_min, L1_colony_max,dist_colony, pLand_prob, c, RMR, 
-c1, c2, c3, c4, TC, Beta_active, Beta_rest, year) %>%
+dplyr::group_by(species, colony, individ_id, immersion_type, Parameter, Run, L1, Th1, Th2, L1_colony_min, L1_colony_max,dist_colony, pLand_prob, c, RMR, 
+c1, c2, c3, c4, TC_water, TC_air, Beta_active, Beta_rest, LCT_water, LCT_air, year) %>%
 dplyr::mutate(weeklyDEE_nb=mean(weeklyDEE), sdweeklyDEE_nb=sd(weeklyDEE), devianceDEE=abs(weeklyDEE-weeklyDEE_nb)/weeklyDEE_nb) %>%
 dplyr::summarise(devianceDEE_nb=sum(devianceDEE), TEE_nb=sum(weeklyDEE), tFlight_nb=sum(tFlight),
 tForage_nb=sum(tForage), tActive_nb=sum(tActive), tLand_nb=sum(tLand), tRestWater_nb=sum(tRestWater), DEE_cov_nb=(sd(weeklyDEE)/mean(weeklyDEE))*100)
@@ -120,7 +136,7 @@ tForage_nb=sum(tForage), tActive_nb=sum(tActive), tLand_nb=sum(tLand), tRestWate
 # Calculate difference compared to baseline scenario
 sensResCompare<-sensResOutputs %>%
 ungroup() %>%
-dplyr::group_by(species, colony, individ_id, Parameter) %>%
+dplyr::group_by(species, colony, individ_id, Parameter, immersion_type) %>%
 dplyr::mutate(devianceDEE_nb_diff=(devianceDEE_nb-first(devianceDEE_nb))/first(devianceDEE_nb), TEE_nb_diff=(TEE_nb-first(TEE_nb))/first(TEE_nb),
 tFlight_nb_diff=(tFlight_nb-first(tFlight_nb))/first(tFlight_nb), tForage_nb_diff=(tForage_nb-first(tForage_nb))/first(tForage_nb), tLand_nb_diff=(tLand_nb-first(tLand_nb))/first(tLand_nb),
 tActive_nb_diff=(tActive_nb-first(tActive_nb))/first(tActive_nb), tRest_nb_diff=(tRestWater_nb-first(tRestWater_nb))/first(tRestWater_nb), DEE_cov_nb_diff=((DEE_cov_nb)-first(DEE_cov_nb))/(first(DEE_cov_nb))) %>%
@@ -136,7 +152,7 @@ saveRDS(sensitivityRes, file="birdsRound2.rds")
 
 # Determine order of parameters for plotting #
 paramOrder<-c("year", "L1", "Th1", "Th2", "L1_colony", "ice", "dist_colony",
-"pLand_prob", "c", "sst", "RMR", "c1", "c2", "c3", "c4", "TC", "Beta_active", "Beta_rest")
+"pLand_prob", "c", "sst", "RMR", "c1", "c2", "c3", "c4", "TC_water", "TC_air", "Beta_active", "Beta_rest", "LCT_water", "LCT_air")
 
 # Plot results #
 print("Plotting results")
@@ -160,8 +176,39 @@ dplyr::mutate(Parameter=factor(Parameter, levels=rev(paramOrder)))	%>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                    "Little auk", "Common guillemot", "Brünnich's guillemot")))	   
 												   
+# Do calculation for Th1 seperately for northern fulmars & black-legged kittiwakes #					
+th1_surface_foragers<-sensitivityRes %>%
+ungroup() %>%
+dplyr::filter(species %in% c("Black-legged kittiwake", "Northern fulmar") & Parameter=="Th1" & immersion_type==200) %>%
+dplyr::group_by(species, Parameter, Run2) %>%
+summarise(across(devianceDEE_nb_diff:DEE_cov_nb_diff, list(
+                     mean = ~ mean(.x, na.rm = TRUE),
+                     sd   = ~ sd(.x, na.rm = TRUE),
+                     n    = ~ sum(!is.na(.x)),
+                     se   = ~ sd(.x, na.rm = TRUE) / sqrt(sum(!is.na(.x))),
+                     ci_lower = ~ mean(.x, na.rm = TRUE) - 
+                                 1.96 * sd(.x, na.rm = TRUE) / sqrt(sum(!is.na(.x))),
+                     ci_upper = ~ mean(.x, na.rm = TRUE) + 
+                                 1.96 * sd(.x, na.rm = TRUE) / sqrt(sum(!is.na(.x)))
+                   ))) %>%
+dplyr::mutate(Parameter=factor(Parameter, levels=rev(paramOrder)))	%>%
+dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                   "Little auk", "Common guillemot", "Brünnich's guillemot")))	
+
+# Now we add it back in somehow
+rowsRemove<-sensitivityRes %>%
+ungroup() %>%
+dplyr::filter(species %in% c("Black-legged kittiwake", "Northern fulmar") & Parameter=="Th1") %>%
+dplyr::select(species, Parameter) %>%
+dplyr::group_by(species, Parameter) %>%
+dplyr::slice(1)
+
+sensitivityResSum_final<-sensitivityResSum %>%
+dplyr::anti_join(rowsRemove, by=c("species", "Parameter")) %>%
+dplyr::bind_rows(th1_surface_foragers)
+					
 # Calculate range of differences #
-rangeDiff<-sensitivityResSum %>%
+rangeDiff<-sensitivityResSum_final %>%
 ungroup() %>%
 dplyr::filter(Run2>1) %>%
 dplyr::group_by(species, Parameter) %>%
@@ -174,17 +221,17 @@ dplyr::group_by(species) %>%
 dplyr::summarise(mean_change1_all=mean(mean_change1), minci1=min(mean_change1), maxci1=max(mean_change1), mean_change2_all=mean(mean_change2), minci2=min(mean_change2), maxci2=max(mean_change2))
 
 # Seperate these further so everything can be facet-wrapped?
-output0<-sensitivityResSum %>%
+output0<-sensitivityResSum_final %>%
 dplyr::select(species, Parameter, Run2, devianceDEE_nb_diff_mean, devianceDEE_nb_diff_ci_lower, devianceDEE_nb_diff_ci_upper) %>%
 dplyr::rename(mean=devianceDEE_nb_diff_mean, ci_lower=devianceDEE_nb_diff_ci_lower, ci_upper=devianceDEE_nb_diff_ci_upper) %>%
 dplyr::mutate(outputMetric="WEE_deviance_nb")
 
-output1<-sensitivityResSum %>%
+output1<-sensitivityResSum_final %>%
 dplyr::select(species, Parameter, Run2, DEE_cov_nb_diff_mean, DEE_cov_nb_diff_ci_lower, DEE_cov_nb_diff_ci_upper) %>%
 dplyr::rename(mean=DEE_cov_nb_diff_mean, ci_lower=DEE_cov_nb_diff_ci_lower, ci_upper=DEE_cov_nb_diff_ci_upper) %>%
 dplyr::mutate(outputMetric="WEE_cov_nb")
 
-output2<-sensitivityResSum %>%
+output2<-sensitivityResSum_final %>%
 dplyr::select(species, Parameter, Run2, TEE_nb_diff_mean, TEE_nb_diff_ci_lower, TEE_nb_diff_ci_upper) %>%
 dplyr::rename(mean=TEE_nb_diff_mean, ci_lower=TEE_nb_diff_ci_lower, ci_upper=TEE_nb_diff_ci_upper) %>%
 dplyr::mutate(outputMetric="TEE_nb")
