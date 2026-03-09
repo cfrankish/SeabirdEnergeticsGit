@@ -89,7 +89,7 @@ birdFile_check<-all_species_files[grep(birdID, all_species_files)] # Here we che
 
 if (length(birdFile_check)==1) {
 birdID_file<-read.csv(all_species_files[grep(birdID, all_species_files)], nrow=3) # Find the matching file
-sensRes$immersion_type<-birdID_file$max.cond[1] # Add conductivity sampling rate
+sensRes$immersion_type<-as.character(birdID_file$max.cond[1]) # Add conductivity sampling rate
 } else {
 sensRes$immersion_type<-"NA"
 }
@@ -174,7 +174,8 @@ summarise(across(devianceDEE_nb_diff:DEE_cov_nb_diff, list(
                    ))) %>%
 dplyr::mutate(Parameter=factor(Parameter, levels=rev(paramOrder)))	%>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
-                                                   "Little auk", "Common guillemot", "Brünnich's guillemot")))	   
+                                                   "Little auk", "Common guillemot", "Brünnich's guillemot")))	 %>%
+dplyr::filter(!Parameter %in% c("sst", "ice"))												   
 												   
 # Do calculation for Th1 seperately for northern fulmars & black-legged kittiwakes #					
 th1_surface_foragers<-sensitivityRes %>%
