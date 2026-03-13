@@ -1,4 +1,4 @@
-# This script does the following: makes maps for Figures 1, S1 & S2, and generates species and population-level activity & energy budgets #
+# This script does the following: makes maps for Figures 1, S1 & S2, and generates species and population-level activity & energy budgets (for visual inspection) #
 ### Input files is the id catalogue (table1_idcatalogue.csv) and start & end dates of the study period (which can be changed manually in the workflow file) ###
 ### The script maps where the study populations are (Figures 1, S1 & S2) ###
 ### It also outputs some figures showing variation in actvity budgets, sst & energy over time for my own visualisation ### 
@@ -25,11 +25,12 @@ library(terra)
 library(ncdf4)
 library(gridExtra)
 
+# This line of code allows the script to read command-line arguments #
 args <- commandArgs(trailingOnly = TRUE)
 
-# Set up minimum sample size & number of iterations
+### Step 0: Set-up some starting parameter information ###
 
-# minSampleSize<-1
+# Determine minimum sample size (number of birds per population) & number of iterations of energetic calculations to use # (based on s3_1)
 
 minSampleSize<-5
 reps<-50
@@ -39,13 +40,9 @@ reps<-50
 # This is so we can loop through them later #
 
 print("Step 1: Load id catalogue")
+
 input_file <- args[1]
 energyAll <- read.csv(input_file)
-
-# Code below for testing purposes only
-#ids<-unique(energyAll$individ_id)
-#idsSub<-sample(ids, 100, replace=F)
-#energyAll<-subset(energyAll, individ_id %in% c(idsSub))
 
 ### Step 2: Make a map of study site ###
 
@@ -555,87 +552,11 @@ FigureS2<-ggplot() +
   plot(FigureS2)
   dev.off()
 
+### Step 3: Species-specific average activity & possible energy ####
 
-# Now we add any extra one with currents & sea names for better describing what's going on #
+# Here we make general plots showing temporal variation in activity budgets, SST & energy (but mainly for checking everything looks good! #
 
-print("Making map S2...")
-
-currents<-st_read("./data/currents/Major_Ocean_Currents.shp")
-currents_trans<-st_transform(currents, crs = projection_NA)
-
-colonies_lox_trans<-data.frame(spTransform(colonies_lox, projection_NA))
-colonies_lox_trans<-colonies_lox_trans %>%
-  dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
-                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
-  dplyr::left_join(amountJitter, by=c("colonyName")) %>%
-  dplyr::mutate(coords.x1=ifelse(colonyName %in% c("GR3"), coords.x1-70000, coords.x1)) %>%
-  dplyr::mutate(coords.x1=ifelse(colonyName %in% c("GR2"), coords.x1 + 30000, coords.x1)) %>%
-  dplyr::mutate(coords.x1=ifelse(colonyName %in% c("IC5"), coords.x1 + 30000, coords.x1)) %>%
-  dplyr::mutate(coords.x1=ifelse(colonyName %in% c("IC8"), coords.x1 - 100000, coords.x1)) 
-
-FigureS25<-ggplot() +
-  geom_sf(data=currents_trans, aes(fill=TEMP), alpha=0.2) +
-  geom_sf(data=world, color = "#E5E5E5", fill = "#E5E5E5") +
-  geom_sf(data=coast) +
-  geom_text(aes(label="Arctic Ocean", x=1963494.28 - 1700000, y=2837995.2 + 90000), color="darkblue", size=3 ,fontface = "italic")+
-  geom_text(aes(label="Barents Sea", x=1963494.28 -700000, y=2837995.2 - 900000), color="darkblue", size=2 ,fontface = "italic", angle=45)+
-  geom_text(aes(label="Greenland Sea", x=1963494.28 -1800000, y=2837995.2 - 800000), color="darkblue", size=2 ,fontface = "italic", angle=80)+
-  geom_text(aes(label="Norwegian Sea", x=1963494.28 -1800000, y=2837995.2 - 2000000), color="darkblue", size=2 ,fontface = "italic", angle=80)+
-  geom_text(aes(label="North Sea", x=1963494.28 -1200000, y=2837995.2 - 3300000), color="darkblue", size=2 ,fontface = "italic")+
-  geom_text(aes(label="Labrador Sea", x=1963494.28 -4300000, y=2837995.2 - 3000000), color="darkblue", size=2 ,fontface = "italic")+
-  geom_text(aes(label="Baffin Bay", x=1963494.28 -3800000, y=2837995.2 - 1300000), color="darkblue", size=2 ,fontface = "italic", angle=65)+
-  scale_fill_manual(values=c("darkblue", "red")) +
-  geom_point(data=colonies_lox_trans, aes(x=coords.x1, y=coords.x2),  cex=3, fill="yellow", shape=21) + 
-  coord_sf(crs=projection_NA, xlim=c(-4095718.87 - 10000, 1963494.28 + 90000), ylim=c(-1025375.3 - 1600000, 2837995.2  + 220000)) +
-  geom_sf_text(data=currents_trans, aes(label=NAME), size=2) +
-  xlab("") +
-  ylab("") +
-  labs(colour="", fill="Type of current") +
-  guides(
-    color = guide_legend(position = "bottom"),  # Move color legend to bottom
-    fill = guide_legend(position = "bottom")    # Keep shape legend on the right
-  ) 
-
-# This map is not appearing in the MS currently #
-
-#pdf("./results/figures/supplementary/FigureS25.pdf")
-#plot(FigureS25)
-#dev.off()
-
-# make a blank one so I can draw myself
-
-FigureS1_part3<-ggplot() +
-  #geom_sf(data=currents_trans, aes(fill=TEMP), alpha=0.2) +
-  geom_sf(data=world, color = "#E5E5E5", fill = "#E5E5E5") +
-  geom_sf(data=coast) +
-  geom_text(aes(label="Arctic Ocean", x=1963494.28 - 1700000, y=2837995.2 + 90000), color="darkblue", size=3 ,fontface = "italic")+
-  geom_text(aes(label="Barents Sea", x=1963494.28 -700000, y=2837995.2 - 900000), color="darkblue", size=2 ,fontface = "italic", angle=45)+
-  geom_text(aes(label="Greenland Sea", x=1963494.28 -1800000, y=2837995.2 - 800000), color="darkblue", size=2 ,fontface = "italic", angle=80)+
-  geom_text(aes(label="Norwegian Sea", x=1963494.28 -1800000, y=2837995.2 - 2000000), color="darkblue", size=2 ,fontface = "italic", angle=80)+
-  geom_text(aes(label="North Sea", x=1963494.28 -1200000, y=2837995.2 - 3300000), color="darkblue", size=2 ,fontface = "italic")+
-  geom_text(aes(label="Labrador Sea", x=1963494.28 -4300000, y=2837995.2 - 3000000), color="darkblue", size=2 ,fontface = "italic")+
-  geom_text(aes(label="Baffin Bay", x=1963494.28 -3800000, y=2837995.2 - 1300000), color="darkblue", size=2 ,fontface = "italic", angle=65)+
-  scale_fill_manual(values=c("darkblue", "red")) +
-  geom_point(data=colonies_lox_trans, aes(x=coords.x1, y=coords.x2),  cex=2, fill="yellow", shape=21) + 
-  coord_sf(crs=projection_NA, xlim=c(-4095718.87 - 10000, 1963494.28 + 90000), ylim=c(-1025375.3 - 1600000, 2837995.2  + 220000)) +
-  #geom_sf_text(data=currents_trans, aes(label=NAME), size=2) +
-  xlab("") +
-  ylab("") +
-  labs(colour="") +
-  guides(
-    color = guide_legend(position = "bottom"),  # Move color legend to bottom
-    fill = guide_legend(position = "bottom")    # Keep shape legend on the right
-  ) 
-
-#pdf("./results/figures/supplementary/FigureS25_blank.pdf")
-#plot(FigureS1_part3)
-#dev.off()
-
-### Step 4: Species-specific average activity & possible energy ####
-
-# Here we make general maps showing temporal variation in activity budgets, SST & energy (but mainly for checking everything looks good! #
-
-print("Step 4: calculating species-specific budgets...")
+print("Step 3: calculating species-specific budgets...")
 
 # Determine where daily files are
 allResults<-list.files("./tmp/", full.names=TRUE)
@@ -680,11 +601,6 @@ speciesWeightDivider<-data.frame(species=c("Black-legged kittiwake", "Northern f
                                            "Little auk", "Common guillemot", "Brünnich's guillemot"), divider=c(0.717, 0.765, 0.689, 0.689, 0.689, 0.689),
                                  newWeight=c(365, 651, 370, 149, 989, 989))
 
-# 365 & 561 are from Gabrielsen's paper
-# 989 is average weight of BrGu from our dataset
-# 370 is from annette's apper
-# 151 is from st-marie paper
-
 # Make list to save results in
 average_activity<-list()
 
@@ -692,7 +608,7 @@ average_activity<-list()
 
 for (j in 1:length(speciesList)) {
   
-  print(paste0("Step 4: Species ", j, "/", length(speciesList)))
+  print(paste0("Step 3: Species ", j, "/", length(speciesList)))
   
   speciesSub<-speciesList[j]
   
@@ -709,9 +625,11 @@ for (j in 1:length(speciesList)) {
   print("Assembling birds...")
   
   for (k in 1:length(ids)) {
+  
+  #for (k in 1:20) {
     
     # Print update message
-    print(paste0("Step4: Assembling... Species ", j, " Bird ", k, "/", length(ids)))  
+    print(paste0("Step3: Assembling... Species ", j, " Bird ", k, "/", length(ids)))  
     
     # Open id k
     birdSub<-ids[k]
@@ -829,9 +747,9 @@ average_activity_all<-average_activity %>%
                    SST=mean(meansst), sdSST=sd(meansst), seSST=sdSST/sqrt(reps), SST_max=max(maxsst), SST_min=min(minsst),
                    energy=mean(meanDEE), sdenergy=sd(meanDEE), seenergy=sdenergy/sqrt(reps))
 
-### Step 5: the same as above but for colonies ####
+### Step 4: the same as above but for colonies ####
 
-print("Step 5: estimating population-specific parameters...")
+print("Step 4: estimating population-specific parameters...")
 
 # Run from 1st of September through to end of April # 
 
@@ -871,6 +789,8 @@ for (j in 1:length(speciesList)) {
   print("Assembling birds...")
   
   for (k in 1:length(ids)) {
+  
+  #for (k in 1:20) {
     
 # Print update message
 print(paste0("Step5: Assembling... Species ", j, " Bird ", k, "/", length(ids)))  
@@ -1016,7 +936,7 @@ print("Making supplementary plots - activity")
 startMonth<-dates_weekly %>%
   dplyr::filter(day==1)
 
-FigureS9<-average_activity_all_colony %>%
+activityPlot<-average_activity_all_colony %>%
   ggplot() +
   geom_pointrange(aes(x=weekNo, y=Flight, colour="Flight",  ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight), cex=0.1, alpha=0.05) +
   geom_line(aes(colour="Flight", x=weekNo, y=Flight, group=colony), alpha=0.05) +
@@ -1051,7 +971,7 @@ FigureS9<-average_activity_all_colony %>%
   geom_pointrange(data=filter(average_activity_all_species, Flight>0), aes(x=weekNo, y=Flight, colour="Flight", ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight), cex=0.1) +
   geom_line(data=filter(average_activity_all_species, Flight>0),aes(colour="Flight", x=weekNo, y=Flight)) +
   geom_ribbon(data=filter(average_activity_all_species, Flight>0),aes(x=weekNo, y=Flight, ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight, fill="Flight"), alpha=0.2) +
-  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
+  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
   xlab("") +
   ylab("Proportion of day spent in behaviour") +
   scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#F3CC00", "#0072b2", "#E25822"))+
@@ -1060,52 +980,26 @@ FigureS9<-average_activity_all_colony %>%
   theme(legend.position ="bottom") 
 
 pdf("./results/figures/supplementary/activity.pdf", width=10, height=7)
-grid.arrange(FigureS9)
+grid.arrange(activityPlot)
 dev.off()
 
 # Supplementary plot showing time in flight
 
 print("Making supplementary plots - flight")
 
-FigureS10<-average_activity_all_colony %>%
+flightPlot<-average_activity_all_colony %>%
   ggplot() +
-  #geom_image(data=birdsimage, aes(x=weekNo, y=maxDEE, image=image), size=0.26, alpha=1) +
   geom_pointrange(aes(x=weekNo, y=Flight, colour="Flight",  ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight), cex=0.1, alpha=0.05) +
   geom_line(aes(colour="Flight", x=weekNo, y=Flight, group=colony), alpha=0.05) +
   geom_ribbon(aes(x=weekNo, y=Flight, ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight, fill="Flight", group=colony), alpha=0.05) +
   facet_wrap(~species, nrow=2, scales="free") +
   labs(color="", fill="") +
-  # geom_pointrange(data=filter(average_activity_all_colony, Active>0) ,aes(x=weekNo, y=Active, colour="Active", ymin=Active-1.96*seActive, ymax=Active + 1.96*seActive), cex=0.1, alpha=0.05) +
-  #geom_line(data=filter(average_activity_all_colony, Active>0) ,aes(colour="Active", x=weekNo, y=Active, group=colony), alpha=0.05) +
-  #geom_ribbon(data=filter(average_activity_all_colony ,Active>0) ,aes(x=weekNo, y=Active, ymin=Active-1.96*seActive, ymax=Active + 1.96*seActive, fill="Active", group=colony), alpha=0.05) +
-  #geom_pointrange(data=filter(average_activity_all_colony, Forage>0) ,aes(x=weekNo, y=Forage, colour="Forage", ymin=Forage-1.96*seForage, ymax=Forage + 1.96*seForage, group=colony), cex=0.1, alpha=0.05) +
-  #geom_line(data=filter(average_activity_all_colony, Forage>0) ,aes(colour="Forage", x=weekNo, y=Forage, group=colony), alpha=0.05) +
-  #geom_ribbon(data=filter(average_activity_all_colony, Forage>0) ,aes(x=weekNo, y=Forage, ymin=Forage-1.96*seForage, ymax=Forage + 1.96*seForage, fill="Forage", group=colony), alpha=0.05) +
-  #geom_pointrange(aes(x=weekNo, y=Rest, colour="Water", ymin=Rest-1.96*seRest, ymax=Rest + 1.96*seRest, group=colony), cex=0.1, alpha=0.05) +
-  #geom_line(aes(colour="Water", x=weekNo, y=Rest, group=colony), alpha=0.05) +
-  #geom_ribbon(aes(x=weekNo, y=Rest, ymin=Rest-1.96*seRest, ymax=Rest + 1.96*seRest, fill="Water", group=colony), alpha=0.05) +
-  #geom_pointrange(aes(x=weekNo, y=Land, colour="Land", ymin=Land-1.96*seLand, ymax=Land + 1.96*seLand, group=colony), alpha=0.05, cex=0.1) +
-  #geom_line(aes(colour="Land", x=weekNo, y=Land, group=colony), alpha=0.05) +
-  #geom_ribbon(aes(x=weekNo, y=Land, ymin=Land-1.96*seLand, ymax=Land + 1.96*seLand, fill="Land", group=colony), alpha=0.05) +
   theme_bw() +
-  ### Now for species-specific trends
-  #geom_pointrange(data=average_activity_all_species, aes(x=weekNo, y=Land, colour="Land", ymin=Land-1.96*seLand, ymax=Land + 1.96*seLand), cex=0.1) +
-  #geom_line(data=average_activity_all_species,aes(colour="Land", x=weekNo, y=Land)) +
-  #geom_ribbon(data=average_activity_all_species,aes(x=weekNo, y=Land, ymin=Land-1.96*seLand, ymax=Land + 1.96*seLand, fill="Land"), alpha=0.2) +
-  #geom_pointrange(data=filter(average_activity_all_species, Forage>0), aes(x=weekNo, y=Forage, colour="Forage", ymin=Forage-1.96*seForage, ymax=Forage + 1.96*seForage), cex=0.1) +
-  #geom_line(data=filter(average_activity_all_species, Forage>0),aes(colour="Forage", x=weekNo, y=Forage)) +
-  #geom_ribbon(data=filter(average_activity_all_species, Forage>0),aes(x=weekNo, y=Forage, ymin=Forage-1.96*seForage, ymax=Forage + 1.96*seForage, fill="Forage"), alpha=0.2) +
-  #geom_pointrange(data=filter(average_activity_all_species, Active>0), aes(x=weekNo, y=Active, colour="Active", ymin=Active-1.96*seActive, ymax=Active + 1.96*seActive), cex=0.1) +
-  #geom_line(data=filter(average_activity_all_species, Active>0),aes(colour="Active", x=weekNo, y=Active)) +
-  #geom_ribbon(data=filter(average_activity_all_species, Active>0),aes(x=weekNo, y=Active, ymin=Active-1.96*seActive, ymax=Active + 1.96*seActive, fill="Active"), alpha=0.2) +
-  #geom_pointrange(data=filter(average_activity_all_species, Rest>0), aes(x=weekNo, y=Rest, colour="Water", ymin=Rest-1.96*seRest, ymax=Rest + 1.96*seRest), cex=0.1) +
-  #geom_line(data=filter(average_activity_all_species, Rest>0),aes(colour="Water", x=weekNo, y=Rest)) +
-  #geom_ribbon(data=filter(average_activity_all_species, Rest>0),aes(x=weekNo, y=Rest, ymin=Rest-1.96*seRest, ymax=Rest + 1.96*seRest, fill="Water"), alpha=0.2) +
   geom_pointrange(data=filter(average_activity_all_species, Flight>0), aes(x=weekNo, y=Flight, colour="Flight", ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight), cex=0.1) +
   geom_line(data=filter(average_activity_all_species, Flight>0),aes(colour="Flight", x=weekNo, y=Flight)) +
   geom_ribbon(data=filter(average_activity_all_species, Flight>0),aes(x=weekNo, y=Flight, ymin=Flight-1.96*seFlight, ymax=Flight + 1.96*seFlight, fill="Flight"), alpha=0.2) +
   
-  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
+  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
   xlab("") +
   ylab("Proportion of day spent in behaviour") +
   scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#F3CC00", "#0072b2", "#E25822"))+
@@ -1114,17 +1008,14 @@ FigureS10<-average_activity_all_colony %>%
   theme(legend.position ="bottom") 
 
 pdf("./results/figures/supplementary/flight.pdf", width=10, height=7)
-plot(FigureS10)
+plot(flightPlot)
 dev.off()
 
 # Making supplementary plots - SST
 
-print("Making plot S11")
-
 average_activity_all_colony2<-average_activity_colony %>%
   ungroup() %>%
   dplyr::group_by(species, colony, rep) %>%
-  #dplyr::mutate(SST_scale=scale_to_range(meansst, old_min=min(meansst), old_max=max(meansst), new_min=min(meanDEE), new_max=max(meanDEE))) %>%
   dplyr::group_by(species, colony, weekNo) %>%
   dplyr::summarise(reps=n_distinct(rep), Flight=mean(meanFlight), sdFlight=sd(meanFlight), seFlight=sdFlight/sqrt(reps),
                    Forage=mean(meanForage), sdForage=sd(meanForage), seForage=sdForage/sqrt(reps),
@@ -1133,15 +1024,12 @@ average_activity_all_colony2<-average_activity_colony %>%
                    Active=mean(meanActive), sdActive=sd(meanActive), seActive=sdActive/sqrt(reps),
                    SST=mean(meansst), sdSST=sd(meansst), seSST=sdSST/sqrt(reps), SST_max=max(maxsst), SST_min=min(minsst),
                    energy=mean(meanDEE), sdenergy=sd(meanDEE), seenergy=sdenergy/sqrt(reps)) %>%
-  #filter(row_number() %% 15 == 0) %>%
-  #dplyr::filter(meanBirds>10 & reps==10) %>%
   dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
 
 average_activity_all2<-average_activity %>%
   ungroup() %>%
   dplyr::group_by(species, rep) %>%
-  #dplyr::mutate(SST_scale=scale_to_range(meansst, old_min=min(meansst), old_max=max(meansst), new_min=min(meanDEE), new_max=max(meanDEE))) %>%
   ungroup() %>%
   dplyr::group_by(species, weekNo) %>%
   dplyr::summarise(reps=n_distinct(rep), Flight=mean(meanFlight), sdFlight=sd(meanFlight), seFlight=sdFlight/sqrt(reps),
@@ -1154,7 +1042,7 @@ average_activity_all2<-average_activity %>%
   dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot")))
 
-FigureS11<-average_activity_all_colony2 %>%
+sstPlot<-average_activity_all_colony2 %>%
   ggplot(aes(x=weekNo, y=SST)) +
   geom_pointrange(aes(colour="SST", x=weekNo, y=SST, ymin=SST-1.96*seSST, ymax=SST + 1.96*seSST), cex=0.1, alpha=0.05) +
   geom_line(aes(colour="SST", x=weekNo, y=SST, group=colony), alpha=0.05) +
@@ -1162,34 +1050,23 @@ FigureS11<-average_activity_all_colony2 %>%
   facet_wrap(~species, nrow=2, scales="free_y") +
   labs(color="Behaviour", fill="Behaviour") +
   theme_bw() +
-  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
+  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
   xlab("") +
-  #geom_pointrange(aes(x=weekNo, y=SST, ymin=(SST-seSST*1.96), ymax=(SST+seSST*1.96), colour="scaled SST", group=colony), cex=0.1, alpha=0.05) +
-  #geom_line(aes(colour="scaled SST", x=weekNo, y=SST, group=colony), alpha=0.05) +
-  #geom_ribbon(aes(x=weekNo, y=(SST), ymin=(SST-1.96*seSST), ymax=(SST + 1.96*seSST), fill="scaled SST", group=colony), alpha=0.05) +
-  #scale_y_continuous(sec.axis = sec_axis(~.1, name="SST (degrees C)")) +
   ylab("SST (°C)") +
   labs(colour="", fill="") +
   scale_color_manual(values=c( "#E25822"))+
   scale_fill_manual(values=c(  "#E25822")) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   theme(legend.position ="bottom") +
-  #ggtitle("B) Energy budgets") +
   geom_pointrange(data=average_activity_all2,aes(x=weekNo, y=SST, ymin=(SST-seSST*1.96), ymax=(SST+seSST*1.96), colour="SST"), cex=0.1, alpha=0.5) +
   geom_line(data=average_activity_all2,aes(colour="SST", x=weekNo, y=SST), alpha=0.5) +
   geom_ribbon(data=average_activity_all2,aes(x=weekNo, y=(SST), ymin=(SST-1.96*seSST), ymax=(SST + 1.96*seSST), fill="SST"), alpha=0.2) 
-#geom_pointrange(data=average_activity_all_species, aes(colour="DEE", x=weekNo, y=energy, ymin=energy-1.96*seenergy, ymax=energy + 1.96*seenergy), cex=0.1) +
-#geom_line(data=average_activity_all_species, aes(colour="DEE", x=weekNo, y=energy)) +
-#geom_ribbon(data=average_activity_all_species, aes(x=weekNo, y=energy, ymin=energy-1.96*seenergy, ymax=energy + 1.96*seenergy, fill="DEE"), alpha=0.2) 
-
 
 pdf("./results/figures/supplementary/sst.pdf", width=10, height=7)
-plot(FigureS11)
+plot(sstPlot)
 dev.off()
 
 # Making supplementary plots - energy-related variation
-
-print("Making figure 12...")
 
 # Add maximum & min countours #
 
@@ -1201,7 +1078,7 @@ Contours<-average_activity_all_colony %>%
 
 # And minimum contour #
 
-FigureS12<-average_activity_all_colony %>%
+energyPlot<-average_activity_all_colony %>%
   ggplot(aes(x=weekNo, y=energy)) +
   geom_pointrange(aes(colour="DEE", x=weekNo, y=energy, ymin=energy-1.96*seenergy, ymax=energy + 1.96*seenergy), cex=0.1, alpha=0.05) +
   geom_line(aes(colour="DEE", x=weekNo, y=energy, group=colony), alpha=0.05) +
@@ -1209,22 +1086,14 @@ FigureS12<-average_activity_all_colony %>%
   facet_wrap(~species, nrow=2, scales="free_y") +
   labs(color="Behaviour", fill="Behaviour") +
   theme_bw() +
-  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
+  scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
   xlab("") +
-  #geom_pointrange(aes(x=weekNo, y=SST, ymin=(SST-seSST*1.96), ymax=(SST+seSST*1.96), colour="scaled SST", group=colony), cex=0.1, alpha=0.05) +
-  #geom_line(aes(colour="scaled SST", x=weekNo, y=SST, group=colony), alpha=0.05) +
-  #geom_ribbon(aes(x=weekNo, y=(SST), ymin=(SST-1.96*seSST), ymax=(SST + 1.96*seSST), fill="scaled SST", group=colony), alpha=0.05) +
-  #scale_y_continuous(sec.axis = sec_axis(~.1, name="SST (degrees C)")) +
   ylab("DEE (kJ.day-1)") +
   labs(colour="", fill="") +
   scale_color_manual(values=c("#0072b2", "#E25822"))+
   scale_fill_manual(values=c( "#0072b2", "#E25822")) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   theme(legend.position ="bottom") +
-  #ggtitle("B) Energy budgets") +
-  #geom_pointrange(data=average_activity_all_species,aes(x=weekNo, y=SST, ymin=(SST-seSST*1.96), ymax=(SST+seSST*1.96), colour="scaled SST"), cex=0.1, alpha=0.5) +
-  #geom_line(data=average_activity_all_species,aes(colour="scaled SST", x=weekNo, y=SST), alpha=0.5) +
-  #geom_ribbon(data=average_activity_all_species,aes(x=weekNo, y=(SST), ymin=(SST-1.96*seSST), ymax=(SST + 1.96*seSST), fill="scaled SST"), alpha=0.2) +
   geom_pointrange(data=average_activity_all_species, aes(colour="DEE", x=weekNo, y=energy, ymin=energy-1.96*seenergy, ymax=energy + 1.96*seenergy), cex=0.1) +
   geom_line(data=average_activity_all_species, aes(colour="DEE", x=weekNo, y=energy)) +
   geom_ribbon(data=average_activity_all_species, aes(x=weekNo, y=energy, ymin=energy-1.96*seenergy, ymax=energy + 1.96*seenergy, fill="DEE"), alpha=0.2) +
@@ -1232,7 +1101,7 @@ FigureS12<-average_activity_all_colony %>%
   geom_line(data=Contours, aes(colour="DEE", x=weekNo, y=minEnergy), linetype="dashed", alpha=0.8) 
 
 pdf("./results/figures/supplementary/energy.pdf", width=10, height=7)
-plot(FigureS12)
+plot(energyPlot)
 dev.off()
 
 # print
@@ -1259,4 +1128,3 @@ print("Saving output file 3")
 write.csv(average_activity_colony_individual, file = output_file3, row.names = FALSE) # individual-specific budgets
 
 print("DONE")
-
