@@ -291,11 +291,14 @@ energyCost<-birdsAnalysisSub %>%
 dplyr::left_join(species, by=c("species")) %>%
 dplyr::mutate(DEEg=DEEkJ/weight^allometryCoef) %>%
 dplyr::ungroup() %>%
+dplyr::group_by(rep, species, colony, individ_id, weekNo) %>%
+dplyr::mutate(weeklyDEEg=sum(DEEg)) %>%
+dplyr::ungroup() %>% 
 dplyr::group_by(rep, species, colony, individ_id) %>%
-dplyr::summarise(totenergy=sum(DEEg)) %>%
+dplyr::summarise(WEE_cov_nb=(sd(weeklyDEEg)/mean(weeklyDEEg))*100, totenergy=sum(DEEg)) %>%
 ungroup() %>%
 dplyr::group_by(species, colony, individ_id) %>%
-dplyr::summarise(totenergy_ind_iterations=mean(totenergy), sdenergy=sd(totenergy)) %>%
+dplyr::summarise(totenergy_ind_iterations=mean(totenergy), sdenergy=sd(totenergy), mean_WEE_cov_nb=mean(WEE_cov_nb), sd_WEE_cov_nb=sd(WEE_cov_nb)) %>%
 dplyr::mutate(reps=m)
 
 # save results
@@ -319,17 +322,34 @@ minInterationNoRes<-rbind(minInterationNoRes, minIterationNo_colRes)
 FigureS11<-minInterationNoRes %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
-												 ggplot(aes(x=reps, y=totenergy_ind_iterations)) +
+												 ggplot(aes(x=reps, y=mean_WEE_cov_nb)) +
 												 geom_line(aes(group=individ_id, color=individ_id)) +
-												 geom_ribbon(aes(ymin=totenergy_ind_iterations - sdenergy, ymax=totenergy_ind_iterations + sdenergy, group=individ_id, fill=individ_id), alpha=0.2) +
+												 geom_ribbon(aes(ymin=mean_WEE_cov_nb - sd_WEE_cov_nb, ymax=mean_WEE_cov_nb + sd_WEE_cov_nb, group=individ_id, fill=individ_id), alpha=0.2) +
 												 facet_wrap(~species) +
-												 ylab("NB energy expenditure (mean +/- SD)") +
+												 ylab(expression(WEE[COV_NB])) +
 												 xlab("Number of iterations") +
 												 guides(color=FALSE, fill=FALSE) +
 												 theme_bw()
 												 
 pdf("./results/figures/supplementary/FigureS11.pdf")
 plot(FigureS11)
+dev.off()
+
+# Make a plot
+FigureS12<-minInterationNoRes %>%
+dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
+												 ggplot(aes(x=reps, y=totenergy_ind_iterations)) +
+												 geom_line(aes(group=individ_id, color=individ_id)) +
+												 geom_ribbon(aes(ymin=totenergy_ind_iterations - sdenergy, ymax=totenergy_ind_iterations + sdenergy, group=individ_id, fill=individ_id), alpha=0.2) +
+												 facet_wrap(~species) +
+												 ylab(expression(TEE[NB]~(kJ~g^{-1}))) +
+												 xlab("Number of iterations") +
+												 guides(color=FALSE, fill=FALSE) +
+												 theme_bw()
+												 
+pdf("./results/figures/supplementary/FigureS12.pdf")
+plot(FigureS12)
 dev.off()
 
 # Save output file 2

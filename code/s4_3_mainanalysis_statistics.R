@@ -1,12 +1,11 @@
 # This script conducts the main statistics in my manuscript #
 # Input files are start & end of the study period #
 # There are many output files:
-# output_files1 = f"./results/tables/main/table9_totalNBCosts.csv" -> has colony & species-level patterns in WEEnb & TEEnb
-# output_files2 = f"./results/tables/main/table10_stats3_dredge_nbCosts.csv"
-# output_files3 = f"./results/tables/main/table11_cluster_pop.csv"
-# output_files4 = f"./results/tables/main/table12_stats4_dredge_nbCosts_species.csv"
-# output_files5 = f"./results/tables/main/table13_stats5_dredge_nbCosts_deviance.csv" -> # result of statistics (link between deviance, nonbreeding costs & possible explanatory variables)
-# output_files6 = f"./results/tables/main/table14_stats6_dredge_nbCosts_cov.csv" -> result of statistics (link between cov, nonbreeding costs)
+# Determine intput and output files
+#output_files1 = f"./results/tables/main/table6_totalNBCosts.csv"
+#output_files2 = f"./results/tables/main/table7_stats_WEE_vs_TEE.csv"
+#output_files3 = f"./results/tables/main/table8_stats_WEE_vs_pred.csv"
+#output_files4 = f"./results/tables/main/table9_stats_TEE_vs_pred.csv"
 
 library(ggplot2)
 library(dplyr)
@@ -48,7 +47,7 @@ print("Step 0: setting up initial parameters")
 # Set up minimum sample size & number of iterations
 minSampleSize<-5
 print(paste0("min sample size per colony is: ", minSampleSize))
-reps<-5
+reps<-50
 print(paste0("min iteration number is: ", reps))
 
 ### Step 1: Estimate total non-breeding costs ###
@@ -148,6 +147,7 @@ for (i in 1:reps) {
 	# I also look at proportion of time spent below LCT for investigating other questions #
 	
     speciesNB_stats<-speciesDaily %>%
+	dplyr::filter(ocean=="Atlantic") %>% # Remove Pacific birds 
 	dplyr::left_join(species, by=c("species")) %>%
       ungroup() %>%
 	  dplyr::group_by(rep, species, colony, individ_id) %>%
@@ -158,7 +158,8 @@ for (i in 1:reps) {
 	  ungroup() %>%
       dplyr::group_by(rep, species, colony, individ_id) %>%
       dplyr::summarise(SST=mean(meanSST), SST_col=mean(meanSST_colony), SSTdiff=SST-SST_col, 
-	  propWarm=1-sum(underLCT)/n_distinct(weekNo), propCold_col=sum(underLCT_col)/n_distinct(weekNo))   
+	  propWarm=1-sum(underLCT)/n_distinct(weekNo), propCold_col=sum(underLCT_col)/n_distinct(weekNo), totFlightHrs=sum(totFlightHrs), totActiveHrs=sum(totActiveHrs), totForageHrs=sum(totForageHrs), 
+	  totLandHrs=sum(totLandHrs), totRestHrs=sum(totRestHrs), totHrs=sum(totHrs) )  
 	
     # scale variables for conducting stats # 
     speciesNB_stats5<-speciesNB_stats %>%
@@ -224,8 +225,9 @@ for (i in 1:reps) {
     pred1<-data.frame(WEE_cov_nb=seq(min(devianceWeekly$covDEE), max(devianceWeekly$covDEE), 0.5)) # Make a data frame to predict fitted values from this model (we use the range of values accross all reps)
 	pred1$colony<-speciesNB_stats6$colony[1] # Add colony 
     pred1$fit<-predict(lm1, newdata=pred1, re.form=NA) # Make predictions (fit)
-	se<-predict(lm1, newdata=pred1, re.form=NA, se.fit=TRUE) # Calculate SE
-	pred1$se<-se$se.fit # Add SE
+	se<-predict(lm1, newdata=pred1, re.form=NA, se.fit=TRUE) # Calculate SE for every prediction
+	pred1$sevals<-se$se.fit
+	pred1$se<-coefficients(lm1_sum)[2,2] # Add SE
     r2_values <- r.squaredGLMM(lm1) # Calculate R2
     pred1$r2<-r2_values[1] # Add r2
     pred1$rep<-speciesNB_stats6$rep[1] # add iteration #
@@ -247,7 +249,8 @@ for (i in 1:reps) {
 	pred1_2$colony<-speciesNB_stats6$colony[1] # Add colony 
     pred1_2$fit<-predict(lm1_2, newdata=pred1_2, re.form=NA) # Make predictions (fit)
 	se<-predict(lm1_2, newdata=pred1_2, re.form=NA, se.fit=TRUE) # Calculate SE
-	pred1_2$se<-se$se.fit # Add SE
+	pred1_2$sevals<-se$se.fit
+	pred1_2$se<-coefficients(lm1_2_sum)[2,2] # Add SE
     r2_values <- r.squaredGLMM(lm1_2) # Calculate R2
     pred1_2$r2<-r2_values[1] # Add r2
     pred1_2$rep<-speciesNB_stats6$rep[1] # add iteration #
@@ -357,17 +360,30 @@ print("Preparing datasets for plotting...")
 results_h1_h2<-totalCosts %>%
 dplyr::group_by(rep, species) %>%
 dplyr::slice(1) %>%
-dplyr::select(rep, species, popTest_nbcosts_effectSize, popTest_cov_effectSize) %>%
+dplyr::select(rep, species, popTest_nbcosts_effectSize, popTest_cov_effectSize, popTest_cov_pval, popTest_nbcosts_pval, popTest_nbcosts_H, popTest_cov_H, popTest_nbcosts_df, popTest_cov_df) %>%
 ungroup() %>%
 dplyr::group_by(species) %>%
-dplyr::summarise(repsTot=n_distinct(reps), eff_TEE_nb_mean=mean(popTest_nbcosts_effectSize), eff_TEE_nb_median=median(popTest_nbcosts_effectSize), eff_TEE_nb_sd=sd(popTest_nbcosts_effectSize), 
+dplyr::mutate(sig1=ifelse(popTest_cov_pval<0.05, 1, 0), sig2=ifelse(popTest_nbcosts_pval<0.05, 1, 0)) %>%
+dplyr::summarise(repsTot=n_distinct(rep), eff_TEE_nb_mean=mean(popTest_nbcosts_effectSize), eff_TEE_nb_median=median(popTest_nbcosts_effectSize), eff_TEE_nb_sd=sd(popTest_nbcosts_effectSize), 
 eff_TEE_nb_se=eff_TEE_nb_sd/sqrt(repsTot), eff_TEE_nb_low=eff_TEE_nb_median - 1.96*eff_TEE_nb_se, eff_TEE_nb_high=eff_TEE_nb_median + 1.96*eff_TEE_nb_se,
 eff_WEE_cov_nb_mean=mean(popTest_cov_effectSize), eff_WEE_cov_nb_median=median(popTest_cov_effectSize), eff_WEE_cov_nb_sd=sd(popTest_cov_effectSize), 
-eff_WEE_cov_nb_se=eff_WEE_cov_nb_sd/sqrt(repsTot), eff_WEE_cov_nb_low=eff_WEE_cov_nb_median - 1.96*eff_WEE_cov_nb_se, eff_WEE_cov_nb_high=eff_WEE_cov_nb_median + 1.96*eff_WEE_cov_nb_se) %>%
+eff_WEE_cov_nb_se=eff_WEE_cov_nb_sd/sqrt(repsTot), eff_WEE_cov_nb_low=eff_WEE_cov_nb_median - 1.96*eff_WEE_cov_nb_se, eff_WEE_cov_nb_high=eff_WEE_cov_nb_median + 1.96*eff_WEE_cov_nb_se,
+p_WEE_cov_nb_mean=mean(popTest_cov_pval), p_WEE_cov_nb_sd=sd(popTest_cov_pval), p_WEE_cov_nb_se=p_WEE_cov_nb_sd/sqrt(repsTot),
+p_TEE_nb_mean=mean(popTest_nbcosts_pval), p_TEE_nb_sd=sd(popTest_nbcosts_pval), p_TEE_nb_se=p_TEE_nb_sd/sqrt(repsTot), sig1_prop=sum(sig1)/repsTot, sig2_prop=sum(sig2)/repsTot,
+meanH_TEE=mean(popTest_nbcosts_H), meanH_WEE=mean(popTest_cov_H), meanDF_TEE=mean(popTest_nbcosts_df), meanDF_WEE=mean(popTest_cov_df)) %>%
 ungroup() %>%
 dplyr::group_by(species) %>%
-dplyr::mutate(sig_h1=ifelse(eff_WEE_cov_nb_low>0 & eff_WEE_cov_nb_high >0, 1, 0)) %>%
-dplyr::mutate(sig_h2=ifelse(eff_TEE_nb_low >0 & eff_TEE_nb_high > 0, 1, 0)) 
+dplyr::mutate(sig_h1=ifelse(p_WEE_cov_nb_mean + 1.96*p_WEE_cov_nb_se <0.05, 1, 0)) %>%
+dplyr::mutate(sig_h2=ifelse(p_TEE_nb_mean + 1.96*p_TEE_nb_se, 1, 0)) %>%
+dplyr::mutate(effectSize_TEE=ifelse(eff_TEE_nb_high <0.01, "T", "Other")) %>%
+dplyr::mutate(effectSize_TEE=ifelse(eff_TEE_nb_low >=0.01 & eff_TEE_nb_high < 0.06, "S", effectSize_TEE)) %>%
+dplyr::mutate(effectSize_TEE=ifelse(eff_TEE_nb_low >=0.06 & eff_TEE_nb_high < 0.14, "M", effectSize_TEE)) %>%
+dplyr::mutate(effectSize_TEE=ifelse(eff_TEE_nb_low >=0.14, "L", effectSize_TEE)) %>%
+dplyr::mutate(effectSize_TEE=ifelse(eff_TEE_nb_low <0.01 & eff_TEE_nb_high >=0.01, "T-S", effectSize_TEE)) %>%
+dplyr::mutate(effectSize_WEE=ifelse(eff_WEE_cov_nb_high <0.01, "T", "Other")) %>%
+dplyr::mutate(effectSize_WEE=ifelse(eff_WEE_cov_nb_low >=0.01 & eff_WEE_cov_nb_high < 0.06, "S", effectSize_WEE)) %>%
+dplyr::mutate(effectSize_WEE=ifelse(eff_WEE_cov_nb_low >=0.06 & eff_WEE_cov_nb_high < 0.14, "M", effectSize_WEE)) %>%
+dplyr::mutate(effectSize_WEE=ifelse(eff_WEE_cov_nb_low >=0.14, "L", effectSize_WEE)) 
 
 # Make species mean
 
@@ -444,7 +460,8 @@ Figure2B<-ggplot() +
    geom_pointrange(data=colonyRes, aes(x=TEE_nb_pop_mean, y=species, xmin=TEE_nb_pop_mean - 1.96*TEE_nb_pop_se, xmax=TEE_nb_pop_mean + 1.96*TEE_nb_pop_se, color=species), position = position_dodge2(width=0.6), cex=0.2, alpha=0.2) +
   geom_pointrange(data=speciesRes, aes(x=TEE_nb_sp_mean, y=species, xmin=TEE_nb_sp_mean - 1.96*TEE_nb_sp_se, xmax=TEE_nb_sp_mean + 1.96*TEE_nb_sp_se, color=species), position = position_dodge2(width=0.6), cex=0.4) +
   scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+
-  geom_text(data=filter(speciesRes, sig_h2==1), aes(x=5900, y=species, label=stars)) +
+  #geom_text(data=filter(speciesRes, sig_h2==1), aes(x=5900, y=species, label=stars)) +
+  geom_text(data=speciesRes, aes(x=5900, y=species, label=effectSize_TEE)) +
   theme_bw() +
   xlab(expression("TEE"[NB]*" (kJ.g"^-1*")")) +
   ylab("") +
@@ -468,7 +485,8 @@ Figure2A<-ggplot() +
  geom_pointrange(data=colonyRes2, aes(x=WEE_cov_nb_pop_mean, y=species, xmin=WEE_cov_nb_pop_mean - 1.96*WEE_cov_nb_pop_se, xmax=WEE_cov_nb_pop_mean + 1.96*WEE_cov_nb_pop_se, color=species), position = position_dodge2(width=0.6), cex=0.2, alpha=0.2) +
  geom_pointrange(data=speciesRes, aes(x=WEE_cov_nb_sp_mean, y=species, xmin=WEE_cov_nb_sp_mean - 1.96*WEE_cov_nb_sp_se, xmax=WEE_cov_nb_sp_mean + 1.96*WEE_cov_nb_sp_se, color=species), position = position_dodge2(width=0.6), cex=0.4) +
  scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+
- geom_text(data=filter(speciesRes, sig_h1==1), aes(x=34, y=species, label=stars3)) +
+ #geom_text(data=filter(speciesRes, sig_h1==1), aes(x=34, y=species, label=stars3)) +
+ geom_text(data=speciesRes, aes(x=34, y=species, label=effectSize_WEE)) +
  theme_bw() +
  xlab(expression("WEE"[COV_NB]*"")) +
  ylab("") +
@@ -491,10 +509,11 @@ dev.off()
 lmRes_sum<-lmRes_tot %>%
   dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
-  dplyr::group_by(species, predictor, predictor_val) %>%
-  dplyr::summarise(meanEstimate=mean(fit), meanSE=mean(se), reps=n_distinct(rep), 
-                   meanr2=mean(r2), sdr2=sd(r2), ser2=sdr2/sqrt(reps), meanCoef=mean(coefficient), sdCoef=sd(coefficient), seCoef=sdCoef/sqrt(reps)) %>%
-  dplyr::mutate(sig=ifelse(meanCoef - 1.96*seCoef <0 & meanCoef + 1.96*seCoef>0, 0, 1)) %>%
+  dplyr::group_by(species, type, predictor, predictor_val) %>%
+  dplyr::summarise(meanEstimate=mean(fit), meanSE=mean(sevals), reps=n_distinct(rep), 
+                   meanr2=mean(r2), sdr2=sd(r2), ser2=sdr2/sqrt(reps), meanCoef=mean(coefficient), sdCoef=sd(coefficient), seCoef=sdCoef/sqrt(reps), within_model_var=mean(se^2), between_model_var=var(coefficient),
+				   totalVar=within_model_var + (1+1/reps)*between_model_var, se_pooled=sqrt(totalVar)) %>%
+  dplyr::mutate(low=meanCoef-1.96*se_pooled, high=meanCoef + 1.96*se_pooled, sig=ifelse(meanCoef - 1.96*se_pooled <0 & meanCoef + 1.96*se_pooled>0, 0, 1)) %>%
   dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
   
@@ -553,7 +572,7 @@ dplyr::left_join(maxTEE, by=c("species")) %>%
 dplyr::left_join(minWEE, by=c("species")) %>%
 dplyr::left_join(maxWEE, by=c("species")) %>%
 ungroup() %>%
-dplyr::group_by(species) %>%
+dplyr::group_by(species, type) %>%
 dplyr::filter(meanEstimate >= minTEE & meanEstimate <= maxTEE) %>%
 dplyr::filter(predictor_val >= minWEE & predictor_val <= maxWEE) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
@@ -562,9 +581,9 @@ dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northe
 # plot these
 
 Figure2C<-ggplot() +
-geom_point(data=totalCosts_sum, aes(x=WEE_cov_nb_mean, y=TEE_nb_mean, color=species), alpha=0.1) +
-geom_line(data=lmRes_short, aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
-geom_ribbon(data=lmRes_short, aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
+geom_point(data=totalCosts_sum, aes(x=WEE_cov_nb_mean, y=TEE_nb_mean, color=species), alpha=0.03) +
+geom_line(data=subset(lmRes_short, type=="Weighted"), aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
+geom_ribbon(data=subset(lmRes_short, type=="Weighted"), aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
 scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
 scale_fill_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
 theme_bw() +
@@ -575,23 +594,54 @@ ggtitle("C)") +
 theme(legend.position = "none",
 panel.grid = element_blank(),
 axis.text=element_text(size=12),
-		axis.title=element_text(size=12)) +
-facet_wrap(~species)  
+		axis.title=element_text(size=12)) 
   
-pdf("./results/figures/main/Figure2C.pdf", width=6, height=5)
+pdf("./results/figures/main/Figure2C_weighted.pdf", width=6, height=5)
 plot(Figure2C)
+dev.off()
+
+Figure2C_unweighted<-ggplot() +
+geom_point(data=totalCosts_sum, aes(x=WEE_cov_nb_mean, y=TEE_nb_mean, color=species), alpha=0.06) +
+geom_line(data=subset(lmRes_short, type=="Un_weighted"), aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
+geom_ribbon(data=subset(lmRes_short, type=="Un_weighted"), aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
+scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
+scale_fill_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
+theme_bw() +
+xlab(expression("WEE"[COV_NB]*"")) +
+ylab(expression("TEE"[NB]*" (kJ.g"^-1*")")) +
+theme_bw() +
+ggtitle("C)") + 
+theme(legend.position = "none",
+panel.grid = element_blank(),
+axis.text=element_text(size=12),
+		axis.title=element_text(size=12)) 
+  
+pdf("./results/figures/main/Figure2C_unweighted.pdf", width=6, height=5)
+plot(Figure2C_unweighted)
 dev.off()
 
 ### Figure 3A ####
 
-Figure3A<-lmRes_tot2 %>%
+lmRes_sum<-lmRes_tot %>%
+  dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
+  dplyr::group_by(species, type, predictor, predictor_val) %>%
+  dplyr::summarise(meanEstimate=mean(fit), meanSE=mean(sevals), reps=n_distinct(rep), 
+                   meanr2=mean(r2), sdr2=sd(r2), ser2=sdr2/sqrt(reps), meanCoef=mean(coefficient), sdCoef=sd(coefficient), seCoef=sdCoef/sqrt(reps), within_model_var=mean(se^2), between_model_var=var(coefficient),
+				   totalVar=within_model_var + (1+1/reps)*between_model_var, se_pooled=sqrt(totalVar)) %>%
+  dplyr::mutate(low=meanCoef-1.96*se_pooled, high=meanCoef + 1.96*se_pooled, sig=ifelse(meanCoef - 1.96*se_pooled <0 & meanCoef + 1.96*se_pooled>0, 0, 1)) %>%
+  dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
+
+Figure3A_weighted<-lmRes_tot2 %>%
 dplyr::bind_rows(lmRes_tot3) %>%
 dplyr::filter(!predictors %in% c("(Intercept)")) %>%
 ungroup() %>%
 dplyr::mutate(upper=Estimate + 1.96*Std..Error, lower=Estimate - 1.96*Std..Error) %>%
-dplyr::group_by(species, test, predictors) %>%
-dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper)) %>% 
-dplyr::mutate(sig=ifelse(mean.fit-1.96*mean.se < 0 & mean.fit + 1.96*mean.se > 0, 0, 1)) %>%
+dplyr::group_by(species, type, test, predictors) %>%
+dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), within_model_var=mean(Std..Error^2), between_model_var=var(Estimate), totalVar=within_model_var + (1+1/reps)*between_model_var,
+se_pooled=sqrt(totalVar), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper)) %>% 
+dplyr::mutate(sig=ifelse(mean.fit-1.96*se_pooled< 0 & mean.fit + 1.96*se_pooled > 0, 0, 1)) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
 dplyr::mutate(test=ifelse(test=="WEE_cov_nb_vs_predictors", "WEE_COV_NB", "TEE_NB")) %>%
@@ -601,9 +651,10 @@ dplyr::mutate(predictors=ifelse(predictors=="sst_start_scale", "SST_Start", pred
 dplyr::mutate(predictors=ifelse(predictors=="Migr_scale:sst_gain_scale", "MigratoryDist:SST_Gain", predictors)) %>%
 dplyr::mutate(predictor=factor(predictors, levels=c("MigratoryDist", "SST_Start", "SST_Gain", "MigratoryDist:SST_Gain"))) %>%
 dplyr::mutate(test=factor(test, levels=c("WEE_COV_NB", "TEE_NB"))) %>%
+dplyr::filter(type=="Weighted") %>%
 ggplot(aes(x=mean.fit, y=predictors)) +
-geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*mean.se, xmax=mean.fit + 1.96*mean.se, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
-geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
+geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*se_pooled, xmax=mean.fit + 1.96*se_pooled, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
+#geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
 scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+ 
 theme_bw() +
 theme(legend.position="bottom", axis.title.y = element_text(size = 16)) +
@@ -613,10 +664,50 @@ ylab("Predictor variables") +
 xlab("Estimate +/- 95% confidence intervals") +
 facet_wrap(~test, nrow=2) +
 guides(color="none") +
-labs(tag="A)", alpha="Sig", linetype="Start temp")
+labs(tag="A)", alpha="Sig")
 
-pdf("./results/figures/main/Figure3A.pdf", width=5, height=7.5)
-grid.arrange(Figure3A)
+pdf("./results/figures/main/Figure3A_weighted.pdf", width=5, height=7.5)
+grid.arrange(Figure3A_weighted)
+dev.off()
+
+# un-weighted version
+
+Figure3A_unweighted<-lmRes_tot2 %>%
+dplyr::bind_rows(lmRes_tot3) %>%
+dplyr::filter(!predictors %in% c("(Intercept)")) %>%
+ungroup() %>%
+dplyr::mutate(upper=Estimate + 1.96*Std..Error, lower=Estimate - 1.96*Std..Error) %>%
+dplyr::group_by(species, type, test, predictors) %>%
+dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), within_model_var=mean(Std..Error^2), between_model_var=var(Estimate), totalVar=within_model_var + (1+1/repsTot)*between_model_var,
+se_pooled=sqrt(totalVar), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper),
+CI_low=mean.fit-1.96*se_pooled, CI_high=mean.fit+1.96*se_pooled, r2low=mean.r2-1.96*se.r2, r2high=mean.r2+1.96*se.r2) %>% 
+dplyr::mutate(sig=ifelse(mean.fit-1.96*se_pooled< 0 & mean.fit + 1.96*se_pooled > 0, 0, 1)) %>%
+dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
+dplyr::mutate(test=ifelse(test=="WEE_cov_nb_vs_predictors", "WEE_COV_NB", "TEE_NB")) %>%
+dplyr::mutate(predictors=ifelse(predictors=="Migr_scale", "MigratoryDist", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="sst_gain_scale", "SST_Gain", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="sst_start_scale", "SST_Start", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="Migr_scale:sst_gain_scale", "MigratoryDist:SST_Gain", predictors)) %>%
+dplyr::mutate(predictor=factor(predictors, levels=c("MigratoryDist", "SST_Start", "SST_Gain", "MigratoryDist:SST_Gain"))) %>%
+dplyr::mutate(test=factor(test, levels=c("WEE_COV_NB", "TEE_NB"))) %>%
+dplyr::filter(type=="Un-weighted") %>%
+ggplot(aes(x=mean.fit, y=predictors)) +
+geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*se_pooled, xmax=mean.fit + 1.96*se_pooled, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
+#geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
+scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+ 
+theme_bw() +
+theme(legend.position="bottom", axis.title.y = element_text(size = 16)) +
+scale_shape_manual(values=c(1, 16)) +
+geom_vline(xintercept=0, linetype="dashed") +
+ylab("Predictor variables") +
+xlab("Estimate +/- 95% confidence intervals") +
+facet_wrap(~test, nrow=2) +
+guides(color="none") +
+labs(tag="A)", alpha="Sig")
+
+pdf("./results/figures/main/Figure3A_unweighted.pdf", width=5, height=7.5)
+grid.arrange(Figure3A_unweighted)
 dev.off()
 
 #### Preparing data for supplementary plot making ####
@@ -691,12 +782,12 @@ ungroup() %>%
 dplyr::left_join(weightsdf, by=c("species")) %>%
 dplyr::mutate(totalNBcosts=TEE_nb_pop_mean*weight^allometry, costs_DEE=totalNBcosts/n_distinct(dates_weekly$dateKeep), 
 sdDEE_tot=TEE_nb_pop_sd*weight^allometry, sdDay=sdDEE_tot/n_distinct(dates_weekly$dateKeep)) %>%
-dplyr::select(species, colonyName, costs_DEE, sdDay) %>%
+dplyr::select(species, colonyName, costs_DEE, sdDay, totalNBcosts, sdDEE_tot) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
 												 
 FMR_litt<-data.frame(species=c("Black-legged kittiwake", "Atlantic puffin","Common guillemot", "Northern fulmar", "Brünnich's guillemot" , "Little auk"), 
-costs_DEE=c(995, 874, 1789, 1444, 2036, 609.9), sdDay=c(290, 151, 265, 720.6, 552, 26), colonyName="A")
+costs_DEE=c(995, 874, 1789, 1444, 2036, 609.9), sdDay=c(290, 151, 265, 720.6, 552, 26), colonyName="A", totalNBcosts=c(995, 874, 1789, 1444, 2036, 609.9), sdDEE_tot=c(290, 151, 265, 720.6, 552, 26))
 
 colonyRes_lox3<-rbind(colonyRes_lox2, FMR_litt) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
@@ -706,14 +797,18 @@ dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northe
 print("Saving plots S8 & S12...")
 
 FiguresS8<-ggplot() +
- geom_pointrange(data=filter(colonyRes_lox3, !colonyName %in% c("A")), aes(y=costs_DEE, x=colonyName, ymin=costs_DEE - sdDay, ymax=costs_DEE + sdDay, color=species)) +
- geom_pointrange(data=filter(colonyRes_lox3, colonyName %in% c("A")), aes(y=costs_DEE, x=colonyName, ymin=costs_DEE - sdDay, ymax=costs_DEE + sdDay), color="black") +
+ geom_pointrange(data=filter(colonyRes_lox3, !colonyName %in% c("A")), aes(y=totalNBcosts, x=colonyName, ymin=totalNBcosts - sdDEE_tot, ymax=totalNBcosts + sdDEE_tot, color=species)) +
+ geom_text(data=colonyRes_lox2, aes(x=colonyName, y=totalNBcosts + 1.96*sdDEE_tot +  50, label=round(costs_DEE)), size=1.7) +
+ geom_pointrange(data=filter(colonyRes_lox3, colonyName %in% c("A")), aes(y=costs_DEE*n_distinct(dates_weekly$dateKeep), x=colonyName, ymin=costs_DEE*n_distinct(dates_weekly$dateKeep) - sdDay*n_distinct(dates_weekly$dateKeep), 
+ ymax=costs_DEE*n_distinct(dates_weekly$dateKeep) + sdDay*n_distinct(dates_weekly$dateKeep)), color="black") +
+ scale_y_continuous(
+    name = expression("TEE"[NB]*" (kJ)"),
+    sec.axis = sec_axis(~ . /n_distinct(dates_weekly$dateKeep), name = expression("DEE kJ day"^{-1}))) +
  facet_wrap(~species, scales="free_y", nrow=3) +
  scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+
   theme_bw() +
-  ylab(expression("DEE kJ day"^{-1})) +
+ # ylab(expression("DEE kJ day"^{-1})) +
   xlab("") +
- # geom_text(data=colonyRes_lox2, aes(x=colonyName, y=meanDEEg + 1.96*seDEE +  50, label=round(costs_DEE)), size=1.7) +
   theme_bw() +
   theme(legend.position = "none")  +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
@@ -872,8 +967,8 @@ FigureS13<-ggplot() +
  geom_pointrange(data=colonyRes_lox, aes(x=WEE_cov_nb_pop_mean, y=TEE_nb_pop_mean, xmin=WEE_cov_nb_pop_mean - 1.96*WEE_cov_nb_pop_se, xmax=WEE_cov_nb_pop_mean + 1.96*WEE_cov_nb_pop_se, color=species), alpha=0.1) +
  geom_pointrange(data=colonyRes_lox, aes(x=WEE_cov_nb_pop_mean, y=TEE_nb_pop_mean, ymin=TEE_nb_pop_mean - 1.96*TEE_nb_pop_se, ymax=TEE_nb_pop_mean + 1.96*TEE_nb_pop_se, color=species), alpha=0.1) +
  geom_text_repel(data=colonyRes_lox, aes(x=WEE_cov_nb_pop_mean, y=TEE_nb_pop_mean, label=colonyName), max.overlaps=30) + 
-  geom_line(data=lmRes_short, aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
-geom_ribbon(data=lmRes_short, aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
+  geom_line(data=filter(lmRes_short, type=="Un_weighted"), aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
+geom_ribbon(data=filter(lmRes_short, type=="Un_weighted"), aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
  scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
  scale_fill_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
   theme_bw() +
@@ -953,31 +1048,27 @@ print("Plotting extreme cases of seabirds...pop-level by deviance")
 DistributionData2<-totalCosts %>%
 ungroup() %>%
 dplyr::group_by(species, colony, individ_id) %>%
-dplyr::summarise(meanSST=mean(SST), meanSST_dev=mean(totDevianceSST),
-meanFlight=mean(totFlightHrs), meanFlight_dev=mean(totDevianceFlight),
-meanForage=mean(totForageHrs), meanForage_dev=mean(totDevianceForage),
-meanMigr=mean(MigratoryDistKm), meanDEE=mean(totalDEE), meanDev=mean(totDeviance),
-meanSST_cov=mean(covSST), meanCov=mean(totCov)) %>%
+dplyr::summarise(meanSST=mean(SST),
+meanMigr=mean(MigratoryDistKm), TEE_nb_mean=mean(TEE_nb),
+WEE_cov_nb_mean=mean(WEE_cov_nb)) %>%
 ungroup() %>%
 dplyr::group_by(species, colony) %>%
-dplyr::summarise(birds=n_distinct(individ_id), meanDEECol=mean(meanDEE), sdDEE=sd(meanDEE), seDEE=sdDEE/sqrt(birds), meanDevCol=mean(meanDev), meanCovCol=mean(meanCov)) %>%
+dplyr::summarise(birds=n_distinct(individ_id), TEE_nb_mean_pop=mean(TEE_nb_mean), TEE_nb_sd=sd(TEE_nb_mean), TEE_nb_se=TEE_nb_sd/sqrt(birds), WEE_cov_nb_mean_pop=mean(WEE_cov_nb_mean)) %>%
 dplyr::filter(birds>=minSampleSize) %>%
-arrange(desc(meanCovCol)) %>%
+arrange(desc(WEE_cov_nb_mean_pop)) %>%
 dplyr::slice(c(1, n())) %>%
 dplyr::select(species, colony)
 
 DistributionData1<-totalCosts %>%
 ungroup() %>%
 dplyr::group_by(species, colony, individ_id) %>%
-dplyr::summarise(meanSST=mean(SST), meanSST_dev=mean(totDevianceSST),
-meanFlight=mean(totFlightHrs), meanFlight_dev=mean(totDevianceFlight),
-meanForage=mean(totForageHrs), meanForage_dev=mean(totDevianceForage),
-meanMigr=mean(MigratoryDistKm), meanDEE=mean(totalDEE), meanDev=mean(totDeviance),
-meanSST_cov=mean(covSST), meanCov=mean(totCov)) %>%
+dplyr::summarise(meanSST=mean(SST),
+meanMigr=mean(MigratoryDistKm), TEE_nb_mean=mean(TEE_nb),
+WEE_cov_nb_mean=median(WEE_cov_nb)) %>%
 ungroup() %>%
 dplyr::group_by(species, colony) %>%
-dplyr::mutate(birds=n_distinct(individ_id), meanDEECol=mean(meanDEE), sdDEE=sd(meanDEE), seDEE=sdDEE/sqrt(birds), meanDevCol=mean(meanDev), meanCovCol=mean(meanCov)) %>%
-arrange(meanCovCol) %>%
+dplyr::mutate(birds=n_distinct(individ_id), TEE_nb_mean_pop=mean(TEE_nb_mean), TEE_nb_sd=sd(TEE_nb_mean), TEE_nb_se=TEE_nb_sd/sqrt(birds), WEE_cov_nb_mean_pop=mean(WEE_cov_nb_mean)) %>%
+arrange(WEE_cov_nb_mean_pop) %>%
 dplyr::inner_join(DistributionData2, by=c("species", "colony"), relationship = "many-to-many")
 
 # I want to plot: weekly deviance in SST, energy expenditure, + activity budgets (same plot?), total energy expenditure, locations (gridded points?) + location of colonies with colony names 
@@ -990,7 +1081,8 @@ irma.files.df<-data.frame(irma.files)
 colnames(irma.files.df)<-c("FileName")
 irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Black-legged kittiwake", "Common guillemot", "Brünnich's guillemot")
 
-	speciesList<-unique(DistributionData2$species) 
+# make a species list to loop through #
+speciesList<-unique(DistributionData2$species) 
 
 	for (i in 1:length(speciesList)) {
 
@@ -1000,14 +1092,15 @@ irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Bl
 
 	# Create plot 1: general deviance vs. DEE
 	energyMetrics<-speciesdf %>%
-	dplyr::mutate(metric="WEE_COV_NB", value=meanCov) 
+	dplyr::mutate(metric="WEE_COV_NB", value=WEE_cov_nb_mean) 
 	energyMetrics2<-speciesdf %>%
-	dplyr::mutate(metric="TEE_NB", value=meanDEE) 
+	dplyr::mutate(metric="TEE_NB", value=TEE_nb_mean) 
 	energyMetricsAll<-rbind(energyMetrics, energyMetrics2)
 
 	plota<-energyMetricsAll %>%
 	dplyr::left_join(colonies_lox2, by=c("colony")) %>%
 	ggplot(aes(x=colonyName, y=value)) +
+	#geom_point() +
 	geom_boxplot() +
 	facet_wrap(~metric, scales="free_y") +
 	theme_bw() +
@@ -1071,12 +1164,10 @@ irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Bl
 
 plotb<-behvAll %>%
 filter(metric %in% c("Energy")) %>%
-#dplyr::left_join(colonies_lox2, by=c("colony")) %>%
 ggplot(aes(x=weekNo, y=mean)) +
 geom_line(aes(group=interaction(metric,colony), color=colonyName)) +
 geom_ribbon(aes(group=interaction(metric, colony), ymin=mean - 1.96*se, ymax=mean + 1.96*se, fill=colonyName), alpha=0.2) +
 ylab(expression("WEE"[deviance]*"")) +
-#facet_wrap(~colonyName) +
 theme_bw() +
 xlab("Week #") +
 scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
@@ -1100,11 +1191,9 @@ labs(tag="C)")
 
 plotd<-behvAll %>%
 filter(metric %in% c("SST")) %>%
-#dplyr::left_join(colonies_lox2, by=c("colony")) %>%
 ggplot(aes(x=weekNo, y=mean)) +
 geom_line(aes(group=interaction(metric,colony), color=colonyName)) +
 geom_ribbon(aes(group=interaction(metric, colony), ymin=mean - 1.96*se, ymax=mean + 1.96*se, fill=colonyName), alpha=0.2) +
-#facet_wrap(~colonyName) +
 theme_bw() +
 xlab("Week #") +
 scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
@@ -1120,11 +1209,16 @@ coef2<-meanFlight/meanDev
 # tot hours
 totHours<-n_distinct(dates_weekly$dateKeep)*24
 
-plote<-speciesdf %>%
+meanFlight<-devianceColonyRep %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(MeanPropFlight=mean(meanPropFlight))
+
+plote<-meanFlight %>%
 dplyr::left_join(colonies_lox2, by=c("colony")) %>%
 ungroup() %>%
-dplyr::mutate(propFlight=meanFlight/totHours) %>%
-ggplot(aes(x=colonyName, y=propFlight)) +
+#dplyr::mutate(propFlight=meanFlight/totHours) %>%
+ggplot(aes(x=colonyName, y=MeanPropFlight)) +
 geom_boxplot() +
 theme_bw() +
 ylab("Proportion time in flight") +
@@ -1168,11 +1262,16 @@ ylab("Proportion time foraging")
 # tot hours
 totHours<-n_distinct(dates_weekly$dateKeep)*24
 
-plotg<-speciesdf %>%
+meanForage<-devianceColonyRep %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(MeanPropForage=mean(meanPropForage))
+
+plotg<-meanForage %>%
 dplyr::left_join(colonies_lox2, by=c("colony")) %>%
 ungroup() %>%
-dplyr::mutate(propForage=meanForage/totHours) %>%
-ggplot(aes(x=colonyName, y=propForage)) +
+#dplyr::mutate(propForage=meanForage/totHours) %>%
+ggplot(aes(x=colonyName, y=MeanPropForage)) +
 geom_boxplot() +
 theme_bw() +
 ylab("Proportion time foraging") +
@@ -1479,7 +1578,8 @@ dev.off()
 propBehaviors<-totalCosts %>%
    ungroup() %>%
    dplyr::group_by(rep, species, individ_id) %>%
-   dplyr::mutate(propLandNB=totLandHrs/totHrs, propRestNB=totRestHrs/totHrs, propWet=sum(propRestNB, propActiveNB), propDry=sum(propFlightNB, propForageNB, propLandNB)) %>%
+   dplyr::mutate(propLandNB=totLandHrs/totHrs, propRestNB=totRestHrs/totHrs, propActiveNB=totActiveHrs/totHrs, 
+   propFlightNB=totFlightHrs/totHrs, propForageNB=totForageHrs/totHrs, propWet=sum(propRestNB, propActiveNB), propDry=sum(propFlightNB, propForageNB, propLandNB)) %>%
    ungroup() %>%
    dplyr::group_by(rep, species) %>%
    dplyr::summarise(meanWet=mean(propWet), sdWet=sd(propWet), meanDry=mean(propDry), sdDry=sd(propDry)) %>%
@@ -1565,7 +1665,7 @@ FigureS30<-ggplot() +
   scale_fill_manual(values = c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
   theme_bw() +
   xlab("") +
-  ylab("Prop time spent > LCT") +
+  ylab(expression(paste("Prop time spent >", LCT[Water]))) +
  theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
@@ -1588,21 +1688,11 @@ print("Saving output file 2")
 write.csv(lmRes_tot, file = output_file2, row.names = FALSE) # result of statistics (link between deviance & tot nonbreeding costs)
 
 # Number 3
-output_file3 <- args[5]
+output_file3<- args[5]
 print("Saving output file 3")
-write.csv(totalCosts_colony, file = output_file3, row.names = FALSE) # result of statistics (clustering at population level)
+write.csv(lmRes_tot2, file = output_file3, row.names = FALSE) # result of statistics (link between deviance, nonbreeding costs & possible explanatory variables)
 
 # Number 4
 output_file4<- args[6]
 print("Saving output file 4")
-write.csv(lmRes_allspecies, file = output_file4, row.names = FALSE) # result of statistics (link between deviance & tot nonbreeding costs - species level)
-
-# Number 5
-output_file5<- args[7]
-print("Saving output file 5")
-write.csv(lmRes_tot2, file = output_file5, row.names = FALSE) # result of statistics (link between deviance, nonbreeding costs & possible explanatory variables)
-
-# Number 6
-output_file5<- args[8]
-print("Saving output file 6")
-write.csv(lmRes_tot3, file = output_file5, row.names = FALSE) # result of statistics (link between cov, nonbreeding costs)
+write.csv(lmRes_tot3, file = output_file4, row.names = FALSE) # result of statistics (link between cov, nonbreeding costs)

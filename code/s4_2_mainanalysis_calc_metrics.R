@@ -461,7 +461,8 @@ for (j in 1:length(speciesList)) {
     dplyr::mutate(days=n_distinct(date)) %>%
     dplyr::filter(days==7) %>%
     dplyr::summarise(weeklyDEE=sum(DEEg), weeklyDEE_col=sum(DEEg_col), meanSST=mean(sst_random), meanSST_colony=mean(sst_random_colony), propFlight=sum(tFlight)/168, propActive=sum(tActive)/168, propRest=sum(tRestWater)/168, propForage=sum(tForage)/168,
-                     propLand=sum(tLand)/168, totFlightCost=sum(DEEg_flight), totActiveCost=sum(DEEg_active), totRestCost=sum(DEEg_water), totLandCost=sum(DEEg_land), totForageCost=sum(DEEkJ_forage), ocean=first(ocean)) %>%
+                     propLand=sum(tLand)/168, totFlightCost=sum(DEEg_flight), totActiveCost=sum(DEEg_active), totRestCost=sum(DEEg_water), totLandCost=sum(DEEg_land), totForageCost=sum(DEEkJ_forage), ocean=first(ocean),
+					 totLandHrs=sum(tLand), totFlightHrs=sum(tFlight), totActiveHrs=sum(tActive), totForageHrs=sum(tForage), totRestHrs=sum(tRestWater), totHrs=sum(totLandHrs, totFlightHrs, totActiveHrs, totForageHrs, totRestHrs)) %>%
     ungroup() %>%
     dplyr::mutate(propDEE_flight=totFlightCost/weeklyDEE, propDEE_forage=totForageCost/weeklyDEE, propDEE_active=totActiveCost/weeklyDEE, propDEE_water=totRestCost/weeklyDEE, propDEE_land=totLandCost/weeklyDEE) %>%
     dplyr::group_by(individ_id) %>%
@@ -580,7 +581,7 @@ dplyr::mutate(ocean=="Atlantic") %>%
   ungroup() %>%
   dplyr::group_by(species, colony, individ_id, weekNo) %>%
  dplyr::summarise(devianceDEE_mean=mean(devianceDEE), devianceFlight_mean=mean(devianceFlight), devianceActive_mean=mean(devianceActive), devianceRest_mean=mean(devianceRest), devianceLand_mean=mean(devianceLand), 
- devianceForage_mean=mean(devianceForage), devianceSST_mean=mean(devianceSST)) %>%
+ devianceForage_mean=mean(devianceForage), devianceSST_mean=mean(devianceSST), meanWEE=mean(weeklyDEE)) %>%
  ungroup() %>%
  dplyr::group_by(species, colony, weekNo) %>%
  dplyr::summarise(birds=n_distinct(individ_id), devianceDEE_mean_sp=mean(devianceDEE_mean), devianceDEE_sd=sd(devianceDEE_mean), devianceDEE_se=devianceDEE_sd/sqrt(birds),
@@ -589,7 +590,7 @@ dplyr::mutate(ocean=="Atlantic") %>%
  devianceRest_mean_sp=mean(devianceRest_mean), devianceRest_sd=sd(devianceRest_mean), devianceRest_se=devianceRest_sd/sqrt(birds),
  devianceForage_mean_sp=mean(devianceForage_mean), devianceForage_sd=sd(devianceForage_mean), devianceForage_se=devianceForage_sd/sqrt(birds),
  devianceLand_mean_sp=mean(devianceLand_mean), devianceLand_sd=sd(devianceLand_mean), devianceLand_se=devianceLand_sd/sqrt(birds),
- devianceSST_mean_sp=mean(devianceSST_mean), devianceSST_sd=sd(devianceSST_mean), devianceSST_se=devianceSST_sd/sqrt(birds)) %>%
+ devianceSST_mean_sp=mean(devianceSST_mean), devianceSST_sd=sd(devianceSST_mean), devianceSST_se=devianceSST_sd/sqrt(birds), meanWEE_pop=mean(meanWEE), meanDEE_pop=meanWEE_pop/7) %>%
  dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot")))
 
@@ -757,7 +758,7 @@ Figure3B<-deviancePopulation %>%
   theme_bw() +
   scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
   xlab("") +
-  ylab("Deviance in weekly energy expenditure") +
+  labs(y = expression(WEE[DEV])) + 
   scale_color_manual(values=c("#0072b2", "#e6550d", "#bcbddc"))+
   scale_fill_manual(values=c( "#0072b2", "#e6550d", "#bcbddc")) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
@@ -1026,7 +1027,7 @@ FigureS15<-deviancePopulation %>%
   ggplot(aes(x=weekNo, y=devianceSST_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceSST_mean_sp, group=colony), alpha=0.1) +
   geom_hline(yintercept=0) +
-  geom_ribbon(aes(x=weekNo, y=devianceSST_mean_sp, ymin=devianceSST_mean_sp-1.96*devianceSST_se, ymax=devianceSST_mean_sp + 1.96*devianceSST_se, fill="Population", group=colony), alpha=0.05) +
+  #geom_ribbon(aes(x=weekNo, y=devianceSST_mean_sp, ymin=devianceSST_mean_sp-1.96*devianceSST_se, ymax=devianceSST_mean_sp + 1.96*devianceSST_se, fill="Population", group=colony), alpha=0.05) +
   facet_wrap(~species, nrow=2, scales="free_y") +
   theme_bw() +
   scale_x_continuous(breaks=startMonth$weekNo, labels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr")) +
@@ -1037,7 +1038,7 @@ FigureS15<-deviancePopulation %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   theme(legend.position ="bottom") +
   geom_line(data=devianceSpecies, aes(colour="Species", x=weekNo, y=devianceSST_mean_sp)) +
-  geom_ribbon(data=devianceSpecies, aes(x=weekNo, y=devianceSST_mean_sp, ymin=devianceSST_mean_sp-1.96*devianceSST_se, ymax=devianceSST_mean_sp + 1.96*devianceSST_se, fill="Species"), alpha=0.2) +
+  #geom_ribbon(data=devianceSpecies, aes(x=weekNo, y=devianceSST_mean_sp, ymin=devianceSST_mean_sp-1.96*devianceSST_se, ymax=devianceSST_mean_sp + 1.96*devianceSST_se, fill="Species"), alpha=0.2) +
   labs(color="", fill="") +
   geom_segment(data=ColonyAttendance2, aes(x=Depart_early, xend=Depart_late, y=height2), linetype="dashed") +
   geom_text(data=ColonyAttendance2, aes(x=Depart_early + 3, y=height, label="Departure"), size=2) +
