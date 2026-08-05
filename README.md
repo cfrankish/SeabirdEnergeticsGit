@@ -11,9 +11,22 @@ This repository contains a workflow which can be used to calculate non-breeding 
 - **Access to a high-performance computing cluster**:  
   - This workflow has been built to run on SAGA (https://documentation.sigma2.no/hpc_machines/saga.html), but can be modified to run on other HPC systems or eventually on a local machine.
 
-- **Tracking data**:
-  - Immersion data: Can be requested ([www.seatrack.net](https://seatrack.net/data/data-request-form/))
-  - IRMA maps ([Fauchald et al. 2019](https://www.researchgate.net/profile/Arnaud-Tarroux-2/publication/334458632_Arctic-breeding_seabirds'_hotspots_in_space_and_time_-_A_methodological_framework_for_year-round_modelling_of_environmental_niche_and_abundance_using_light-logger_data/links/5d2c2ed292851cf44085033c/Arctic-breeding-seabirds-hotspots-in-space-and-time-A-methodological-framework-for-year-round-modelling-of-environmental-niche-and-abundance-using-light-logger-data.pdf)): Can be requested ([www.seatrack.net](https://seatrack.net/data/data-request-form/))
+- **Tracking data** (Can be requested via the
+    [SEATRACK data request form](https://seatrack.net/data/data-request-form/))
+  - **Immersion/activity data from GLS:** 
+
+    Has the following columns:
+
+    | session_id | individ_id | date_time | conductivity | std_conductivity |
+    |------------|------------|-----------|--------------|------------------|
+
+  - **IRMA data** ([Fauchald et al. 2019](https://www.researchgate.net/profile/Arnaud-Tarroux-2/publication/334458632_Arctic-breeding_seabirds'_hotspots_in_space_and_time_-_A_methodological_framework_for_year-round_modelling_of_environmental_niche_and_abundance_using_light-logger_data/links/5d2c2ed292851cf44085033c/Arctic-breeding-seabirds-hotspots-in-space-and-time-A-methodological-framework-for-year-round-modelling-of-environmental-niche-and-abundance-using-light-logger-data.pdf)):
+
+    Has the following columns:
+
+    | session_id | individ_id | date_time | conductivity | std_conductivity |
+    |------------|------------|-----------|--------------|------------------|
+    
 
 ## 🔧How to use🔧
 
