@@ -24,11 +24,35 @@ This repository contains a workflow which can be used to calculate non-breeding 
 
     Has the following columns:
 
-    | session_id | individ_id | date_time | conductivity | std_conductivity |
-    |------------|------------|-----------|--------------|------------------|
+    | individ_id | session_id | age_class | timestamp | loc_type | lon | lat |
+    |------------|------------|-----------|-----------|----------|-----|-----|
     
 
 ## 🔧How to use🔧
+
+### Create local project with the following folders ###
+
+```text
+project/
+├── code/
+├── data/
+│   ├── wetdry_database/
+│   ├── positionsIRMA/
+│   ├── ice/
+│   ├── sst/
+│   └── temp/
+```
+
+where:
+
+- `code/` – scripts (in this case `s1_1_merge_tracking_data_local.R` and `s1_2_download_env_data_local.R`)
+- `data/` – input datasets used by the project.
+  - `wetdry_database/` – activity data by species with following format `wetdry_database_Black-legged kittiwake_2026-08-06.rds`
+  - `wetdry_raw/` 
+  - `positionsIRMA/` – IRMA position data.
+  - `ice/` 
+  - `sst/` 
+  - `temp/` 
 
 ### Run local code (steps s1_1 and s1_2)  
 Step s1_1: processes the immersion data and merges it with the IRMA data.
