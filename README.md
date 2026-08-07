@@ -91,11 +91,11 @@ The workflow is created via gwf (https://gwf.app/) and is scripted within `workf
 
 To query the status of a step, enter the following code:
 
-<pre> gwf status s1_1_wetdry_* </pre>
+<pre> gwf status s1_3_merge_wetdry_lox* </pre>
 
 To run one of the steps, enter the following code:
 
-<pre> gwf run s1_1_wetdry_* </pre>
+<pre> gwf run s1_3_merge_wetdry_lox* </pre>
 
 Note this specific example would submit six jobs as this step is parallelized. 
 
