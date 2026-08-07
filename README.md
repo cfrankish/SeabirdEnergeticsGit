@@ -28,7 +28,7 @@ This repository contains a workflow which can be used to calculate non-breeding 
     |------------|------------|-----------|-----------|----------|-----|-----|
     
 
-## 🔧How to use🔧
+## 🔧How to use : local steps🔧
 
 ### Create local project with the following folders ###
 
@@ -59,18 +59,24 @@ Step s1_1: processes the immersion data and merges it with the IRMA data.
 
 Step s1_2: Extracts all unique dates and uses these to download environmental (SST, air temperature and sea-ice concentration rasters) from (https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=overview))
 
-### Make all directories
-<pre>mkdir -p data/wetdry_raw data/sst data/ice data/popdata_raw data/sst data/positionsIRMA scripts results</pre>
+## 🔧How to use : cluster steps🔧
+
+### Make all directories on cluster
+<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA scripts results</pre>
 
 ### Upload local data to cluster
-<i> under construction </i>
+1. Upload all environmental data to `data/sst`, `data/ice` and `data/temp`
+
+2. Upload all activity data produced using `s1_1` to `data/wetdry_raw`
+
+3. Upload all IRMA positions to `data/positionsIRMA`
 
 ### Install conda environment 
 conda environment (i.e. all software needed to conduct this analysis) is contained within the `cbird.yml` file. To install it, enter the following code in console: 
 
-<pre> sbatch Create_environment.sh </pre>
+<pre> sbatch Create_environment_cluster.sh </pre>
 
-Make sure `Create_environment.sh` has been personalized first! (with account name etc.)
+Make sure `Create_environment_cluster.sh` has been personalized first! (with account name etc.)
 
 Environment can then be activated using the following code:
 
