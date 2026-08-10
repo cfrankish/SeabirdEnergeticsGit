@@ -1,22 +1,5 @@
 # Various functions.... # 
 
-#### Splitting light data into years tracked ####
-
-# years is number of unique year of light data in dataset
-# lux.id is a session_id of light data
-# lux.id is a session_id of light data
-
-splitData_yearTracked<-function(lux.id) {
-  
-  lux.id.new<-lux.id %>%
-    dplyr::mutate(month=as.numeric(substr(date_time, 6, 7))) %>%
-    dplyr::mutate(day=as.numeric(substr(date_time, 9, 10))) %>%
-    dplyr::mutate(track_year=ifelse(month<=5 & day<=31, paste0(year-1, "_", substr(year, 3, 4)), paste0(year, "_", substr(year+1, 3, 4))))
-  
-  return(lux.id.new)
-  
-}
-
 #### Activity functions ####
 
 # Function to calculate time spent in different activities
@@ -1447,7 +1430,7 @@ dataSub<-subset(data, session_id %in% sessionNo[session])
 
 calculateEnergetics_BLK_daily<-function(data, weightG) {
   
-  print("Hallo")
+  #print("Hallo")
   
   # cf is caloric conversion factor of 20.1 J per mL O2 (Schmidt-Nielsen 1997)
   cf<-20.1
@@ -1534,7 +1517,8 @@ calculateEnergetics_BLK_daily_map<-function(data, weightG, sstVals) {
   
   # We will make a fake error distribution for beta & TC based on mean errors for other variables which is 29%
   betaCoef<-data$Beta_rest[1]
-  TCCoef<-data$TC[1]
+  TCCoef_water<-data$TC_water[1]
+  TCCoef_air<-data$TC_air[1]
   
   # Account for change in constants
   flightConstantx<-((flightCoef*450)/450^0.717)*weightG^0.717
@@ -1542,19 +1526,31 @@ calculateEnergetics_BLK_daily_map<-function(data, weightG, sstVals) {
   forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.717
   landConstantx<-((landCoef*450)/450^0.717)*weightG^0.717
   betax<-(((betaCoef*cf/1000)*365)/365^0.717)*weightG^0.717
-  TCx<-(((TCCoef*cf/1000)*365)/365^0.717)*weightG^0.717
+  TCx_water<-(((TCCoef_water*cf/1000)*365)/365^0.717)*weightG^0.717
+  TCx_air<-(((TCCoef_air*cf/1000)*365)/365^0.717)*weightG^0.717
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-data$LCT # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
-  restConstant1x<-(LCT*TCx + restConstant2x)
+  LCT_water<-data$LCT_water[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  LCT_air<-data$LCT_air[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+  restConstant1x<-(LCT_water*TCx_water + restConstant2x)
+  beta_land<-landConstantx + LCT_air*TCx_air
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-raster::subset(sstVals, 1)
+  temp<-raster::subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
   # Calculate energy for every cell according to sst in that cell
-  sstDf$DEEkJ<-ifelse(sstDf$layer <= LCT, flightConstantx*data$tFlight_month + forageConstantx*data$tForage_month +
-  (restConstant1x - TCx*sstDf$layer)*data$tRestWater_month +  landConstantx*data$tLand_month, flightConstantx*data$tFlight_month + 
-  forageConstantx*data$tForage_month + restConstant2x*data$tRestWater_month + landConstantx*data$tLand_month)
+  sstDf$DEEkJ_active=0
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <=LCT_water, (restConstant1x - TCx_water*sstDf$sst)*data$tRestWater_month, restConstant2x*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstantx*data$tFlight_month
+  sstDf$DEEkJ_forage=forageConstantx*data$tForage_month
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TCx_air)*data$tLand_month, landConstantx*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_forage + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -1567,8 +1563,7 @@ calculateEnergetics_BLK_daily_map<-function(data, weightG, sstVals) {
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
 
@@ -1692,7 +1687,8 @@ calculateEnergetics_NF_daily_map<-function(data, weightG, sstVals) {
   betaCoef<-data$Beta_rest[1]
   
   # TCCoef - we assume error is equal to average error of others which in this case is 24%
-  TCCoef<-data$TC[1]
+  TCCoef_water<-data$TC_water[1]
+  TCCoef_air<-data$TC_air[1]
   
   # Account for change in constants
   #flightConstantx<-(7.3*RMR*cf/1000)*weightG
@@ -1701,19 +1697,31 @@ calculateEnergetics_NF_daily_map<-function(data, weightG, sstVals) {
   forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.765
   landConstantx<-(((landCoef*RMR*cf/1000)*651)/651^0.765)*weightG^0.765
   betax<-(((betaCoef*cf/1000)*651)/651^0.765)*weightG^0.765
-  TCx<-(((TCCoef*cf/1000)*651)/651^0.765)*weightG^0.765
+  TCx_water<-(((TCCoef_water*cf/1000)*651)/651^0.765)*weightG^0.765
+  TCx_air<-(((TCCoef_air*cf/1000)*651)/651^0.765)*weightG^0.765
   
   # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT<-data$LCT # Gabrielsen et al. 1988
-  restConstant1x<-(LCT*TCx + restConstant2x)
+  LCT_water<-data$LCT_water # Gabrielsen et al. 1988
+  LCT_air<-data$LCT_air # Gabrielsen et al. 1988
+  restConstant1x<-(LCT_water*TCx_water + restConstant2x)
+  beta_land<-landConstantx + TCx_air*LCT_air
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-subset(sstVals, 1)
+  temp<-subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
   # Calculate energy for every cell according to sst in that cell
-  sstDf$DEEkJ<-ifelse(sstDf$layer <= LCT, flightConstantx*data$tFlight_month + forageConstantx*data$tForage_month + 
-  (restConstant1x - TCx*sstDf$layer)*data$tRestWater_month +  landConstantx*data$tLand_month, flightConstantx*data$tFlight_month + 
-  forageConstantx*data$tForage_month + restConstant2x*data$tRestWater_month + landConstantx*data$tLand_month)
+  sstDf$DEEkJ_active=0
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <=LCT_water, (restConstant1x - TCx_water*sstDf$sst)*data$tRestWater_month, restConstant2x*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstantx*data$tFlight_month
+  sstDf$DEEkJ_forage=forageConstantx*data$tForage_month
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TCx_air)*data$tLand_month, landConstantx*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_forage + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -1726,8 +1734,7 @@ calculateEnergetics_NF_daily_map<-function(data, weightG, sstVals) {
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
   
@@ -1837,7 +1844,8 @@ calculateEnergetics_CoGu_daily_map<-function(data, CostDivider, weightG, sstVals
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -1858,26 +1866,37 @@ calculateEnergetics_CoGu_daily_map<-function(data, CostDivider, weightG, sstVals
   # Account for change in constants
   flightConstant<-(flightCoef_kj*convf)*weightG^0.689
   activeConstant<-(activeCoef*convf)*weightG^0.689
-  #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
+ # activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + TC_air_Constant*LCT_air
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-subset(sstVals, 1)
+  temp<-subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
-  # Compute cost of being active & rest seperately
-  sstDf$DEEkJ_active<-ifelse(sstDf$layer <= LCT, (activeConstant-sstDf$layer*TC_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
-  sstDf$DEEkJ_rest<-ifelse(sstDf$layer <= LCT, (restConstant1-sstDf$layer*TC_Constant)*data$tRestWater_month, restConstant2*data$tRestWater_month)
-  sstDf$DEEkJ<-sstDf$DEEkJ_active + sstDf$DEEkJ_rest + flightConstant*data$tFlight_month + data$tLand_month*landConstant
-  sstDf<-sstDf %>%
-  dplyr::select(-c(DEEkJ_active, DEEkJ_rest))
+  # Calculate energy for every cell according to sst in that cell
+  sstDf$DEEkJ_active=ifelse(sstDf$sst <=LCT_water, (activeConstant-sstDf$sst*TC_water_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <= LCT_water, (restConstant1 - TC_water_Constant*sstDf$sst)*data$tRestWater_month , restConstant_adjust*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstant*data$tFlight_month
+  sstDf$DEEkJ_forage=0
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TC_air_Constant)*data$tLand_month, landConstant*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_active + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -1890,8 +1909,7 @@ calculateEnergetics_CoGu_daily_map<-function(data, CostDivider, weightG, sstVals
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
   
@@ -1999,7 +2017,8 @@ calculateEnergetics_BrGu_daily_map<-function(data, CostDivider, weightG, sstVals
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -2020,26 +2039,37 @@ calculateEnergetics_BrGu_daily_map<-function(data, CostDivider, weightG, sstVals
   # Account for change in constants
   flightConstant<-(flightCoef_kj*convf)*weightG^0.689
   activeConstant<-(activeCoef*convf)*weightG^0.689
-  #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
+ # activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + TC_air_Constant*LCT_air
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-subset(sstVals, 1)
+  temp<-subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
-  # Compute cost of being active & rest seperately
-  sstDf$DEEkJ_active<-ifelse(sstDf$layer <= LCT, (activeConstant-sstDf$layer*TC_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
-  sstDf$DEEkJ_rest<-ifelse(sstDf$layer <= LCT, (restConstant1-sstDf$layer*TC_Constant)*data$tRestWater_month, restConstant2*data$tRestWater_month)
-  sstDf$DEEkJ<-sstDf$DEEkJ_active + sstDf$DEEkJ_rest + flightConstant*data$tFlight_month + data$tLand_month*landConstant
-  sstDf<-sstDf %>%
-  dplyr::select(-c(DEEkJ_active, DEEkJ_rest))
+  # Calculate energy for every cell according to sst in that cell
+  sstDf$DEEkJ_active=ifelse(sstDf$sst <=LCT_water, (activeConstant-sstDf$sst*TC_water_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <= LCT_water, (restConstant1 - TC_water_Constant*sstDf$sst)*data$tRestWater_month , restConstant_adjust*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstant*data$tFlight_month
+  sstDf$DEEkJ_forage=0
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TC_air_Constant)*data$tLand_month, landConstant*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_active + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -2052,8 +2082,7 @@ calculateEnergetics_BrGu_daily_map<-function(data, CostDivider, weightG, sstVals
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
   
@@ -2157,7 +2186,7 @@ calculateEnergetics_LiA_daily<-function(data, CostDivider,  weightG) {
 
 calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals) {
   
-  # First I set up the activity cost multipliers which are from Elliott & Gaston et al. & Buckingham (in review)
+   # First I set up the activity cost multipliers which are from Elliott & Gaston et al. & Buckingham (in review)
   flightCoef<-data$c1[1]
   flightCoef_kj.hr.g<-flightCoef/24 # kJ.hr.g
   flightCoef_kj.hr<-flightCoef_kj.hr.g*150.95 # kJ.hr-1
@@ -2165,7 +2194,8 @@ calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals)
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1]
+  TC_water<-data$TC_water[1] # kJ.hr
+  TC_air<-data$TC_air[1] # ml O2 hr
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -2174,14 +2204,14 @@ calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals)
   landCoef<-data$c3[1]
   landCoef_kj<-landCoef*3.6 # kj.hr -> should be the same as the rest coefficient
   
-  # Here is a conversion factor to transform these to g.kj which incorporates allometric scaling
-  convf<-1/CostDivider^0.689 # no wing loading
-  
-   # Active coef when thermoneutral (from kyle's paper)
+  # Active coef when thermoneutral (from kyle's paper)
   #activeCoef_neut<-data$c5[1]
   #activeCoef_neut_kj<-activeCoef_neut*3.6 # kJ.hr
   
   #if (activeCoef_neut_kj > activeCoef) stop (print("Error with active coefs")) # Because the coef when thermoneutral must be lower...
+  
+  # Here is a conversion factor to transform these to g.kj which incorporates allometric scaling
+  convf<-1/CostDivider^0.689 # no wing loading
   
   # Account for change in constants
   flightConstant<-(flightCoef_kj.hr/150.95^0.689)*weightG^0.689
@@ -2189,23 +2219,35 @@ calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals)
   #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  #forageConstant<-(3.64*convother)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-TC_air*20.1/1000*163.7/163.7^0.689*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  LCT_air<-data$LCT_air[1]
+  beta_land<-landConstant + LCT_air*TC_air_Constant
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-subset(sstVals, 1)
+  temp<-subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
-  # Compute cost of being active & rest seperately
-  sstDf$DEEkJ_active<-ifelse(sstDf$layer <= LCT, (activeConstant-sstDf$layer*TC_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
-  sstDf$DEEkJ_rest<-ifelse(sstDf$layer <= LCT, (restConstant1-sstDf$layer*TC_Constant)*data$tRestWater_month, restConstant2*data$tRestWater_month)
-  sstDf$DEEkJ<-sstDf$DEEkJ_active + sstDf$DEEkJ_rest + flightConstant*data$tFlight_month + data$tLand_month*landConstant
-  sstDf<-sstDf %>%
-  dplyr::select(-c(DEEkJ_active, DEEkJ_rest))
+  # Calculate energy for every cell according to sst in that cell
+  sstDf$DEEkJ_active=ifelse(sstDf$sst <=LCT_water, (activeConstant-sstDf$sst*TC_water_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <= LCT_water, (restConstant1 - TC_water_Constant*sstDf$sst)*data$tRestWater_month , restConstant_adjust*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstant*data$tFlight_month
+  sstDf$DEEkJ_forage=0
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TC_air_Constant)*data$tLand_month, landConstant*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_active + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -2218,8 +2260,7 @@ calculateEnergetics_LiA_daily_map<-function(data, CostDivider, weightG, sstVals)
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
   
@@ -2324,14 +2365,18 @@ calculateEnergetics_AP_daily<-function(data, CostDivider, weightG) {
 
 calculateEnergetics_AP_daily_map<-function(data,  CostDivider, weightG, sstVals) {
   
- # First I set up the activity cost multipliers which are from Elliott & Gaston et al. & Buckingham (in review)
+# First I set up the activity cost multipliers which are from Elliott & Gaston et al. & Buckingham (in review)
   flightCoef<-data$c1[1]
   flightCoef_kj<-flightCoef*3.6 # kJ.hr
   
   # Add a fake error based on error distribution of other terms 
   activeCoef<-data$Beta_active[1] # kj.hr
   restCoef1<-data$Beta_rest[1] # kj.hr
-  TC<-data$TC[1] # kJ.hr
+  TC_water<-data$TC_water[1] # kJ.hr
+  
+  # Extract TC on Land
+  TC_air<-data$TC_air[1] # ml O2 hr
+  LCT_air<-data$LCT_air[1] # Degrees c
   
   # Rest & land coefs
   restCoef2<-data$c4[1]
@@ -2355,23 +2400,34 @@ calculateEnergetics_AP_daily_map<-function(data,  CostDivider, weightG, sstVals)
   #activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
   restConstant1<-(restCoef1*convf)*weightG^0.689
   restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_Constant<-(TC*convf)*weightG^0.689
+  TC_water_Constant<-(TC_water*convf)*weightG^0.689
+  TC_air_Constant<-(TC_air*20.1/1000)*819.3/(819.3^0.689)*weightG^0.689
   landConstant<-(landCoef_kj*convf)*weightG^0.689
   
   # LCT is 14.18 (Buckingham et al. 2025)
-  LCT<-data$LCT
-  restConstant_adjust<-landConstant + LCT*TC_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT*TC_Constant
+  LCT_water<-data$LCT_water[1]
+  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+  
+  # Calculate a beta_land
+  beta_land<-landConstant + LCT_air*TC_air_Constant
   
   # Turn SST raster into a data frame
-  sstDf<-as.data.frame(sstVals, xy=TRUE)
+  sst<-subset(sstVals, 1)
+  temp<-subset(sstVals, 2)
+  sstDf<-as.data.frame(sst, xy=TRUE)
+  airDf<-as.data.frame(temp, xy=TRUE)
+  colnames(sstDf)<-c("x", "y", "sst")
+  colnames(airDf)<-c("x", "y", "temp")
+  sstDf$temp<-airDf$temp
   
-  # Compute cost of being active & rest seperately
-  sstDf$DEEkJ_active<-ifelse(sstDf$layer <= LCT, (activeConstant-sstDf$layer*TC_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
-  sstDf$DEEkJ_rest<-ifelse(sstDf$layer <= LCT, (restConstant1-sstDf$layer*TC_Constant)*data$tRestWater_month, restConstant2*data$tRestWater_month)
-  sstDf$DEEkJ<-sstDf$DEEkJ_active + sstDf$DEEkJ_rest + flightConstant*data$tFlight_month + data$tLand_month*landConstant
-  sstDf<-sstDf %>%
-  dplyr::select(-c(DEEkJ_active, DEEkJ_rest))
+  # Calculate energy for every cell according to sst in that cell
+  sstDf$DEEkJ_active=ifelse(sstDf$sst <=LCT_water, (activeConstant-sstDf$sst*TC_water_Constant)*data$tActive_month, activeConstant_adjust*data$tActive_month)
+  sstDf$DEEkJ_rest=ifelse(sstDf$sst <= LCT_water, (restConstant1 - TC_water_Constant*sstDf$sst)*data$tRestWater_month , restConstant_adjust*data$tRestWater_month)
+  sstDf$DEEkJ_flight=flightConstant*data$tFlight_month
+  sstDf$DEEkJ_forage=0
+  sstDf$DEEkJ_restland=ifelse(sstDf$temp <= LCT_air, (beta_land - sstDf$temp*TC_air_Constant)*data$tLand_month, landConstant*data$tLand_month)
+  sstDf$DEEkJ=sstDf$DEEkJ_rest + sstDf$DEEkJ_flight + sstDf$DEEkJ_active + sstDf$DEEkJ_restland
   
   # Add weight for converting later
   sstDf$weight<-weightG
@@ -2384,8 +2440,7 @@ calculateEnergetics_AP_daily_map<-function(data,  CostDivider, weightG, sstVals)
   
   # Change order of columns
   sstDf_final<-sstDf %>%
-  dplyr::select(rep, species, colony, individ_id, weight, x, y, layer, DEEkJ) %>%
-  rename(sst=layer) 
+  dplyr::select(rep, species, colony, individ_id, weight, x, y, sst, temp, DEEkJ) 
   
   return(sstDf_final)
   
@@ -3979,6 +4034,46 @@ dataSaveAll<-rbind(dataSaveAll, dataSave)
 }
 
 return(dataSaveAll)
+
+}
+
+#### LOOVC FUNCTION #####
+
+conduct_loovc<-function(model_formula, data, responseVar, testType) { # Conduct loovc {
+
+# Determine all individuals in dataset
+allBirds<-unique(data$individ_id)
+
+# make an empty list to save results in
+allresults<-list()
+
+for (i in 1:length(allBirds)) {
+
+print(paste0("Re-fitting to bird", i, "/", length(allBirds)))
+
+# Create test dataset
+allBirdsTest<-subset(data, !individ_id %in% c(allBirds[i])) # remove bird i
+
+# Create prediction dataset
+allBirdsPred<-subset(data, individ_id %in% c(allBirds[i])) # subset to bird i
+
+# Re-fit model
+gamFit <- bam(model_formula, family = betar, data=allBirdsTest)
+
+# Predict model
+allBirdsPred$pred<-predict(gamFit, newdata=allBirdsPred, type="response", exclude= c("s(individ_id)"))
+
+# Compute performance metrics (or error)
+cv_mae <- mean(abs(allBirdsPred[[responseVar]] - allBirdsPred$pred))
+cv_rmse <- sqrt(mean((allBirdsPred[[responseVar]] - allBirdsPred$pred)^2))
+
+# Save result
+results<-data.frame(responseVar, test=testType, individ_id=allBirds[i], mae=cv_mae, rmse=cv_rmse)
+allresults<-rbind(allresults, results)
+
+}
+
+return(allresults)
 
 }
 
