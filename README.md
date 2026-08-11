@@ -62,7 +62,7 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 ## 🔧How to use : cluster steps🔧
 
 ### Make all directories on cluster
-<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA scripts results</pre>
+<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ scripts results</pre>
 
 ### Upload local data to cluster
 1. Upload all environmental data to `data/sst`, `data/ice` and `data/temp`
