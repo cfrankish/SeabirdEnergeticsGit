@@ -62,7 +62,7 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 ## 🔧How to use : cluster steps🔧
 
 ### Make all directories on cluster
-<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ data/birddata_ind/ scripts results</pre>
+<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ data/birddata_ind/ scripts results results/tempPlots</pre>
 
 ### Upload local data to cluster
 1. Upload all environmental data to `data/sst`, `data/ice` and `data/temp`
@@ -70,6 +70,8 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 2. Upload all activity data produced using `s1_1` to `data/wetdry_raw`
 
 3. Upload all IRMA positions to `data/positionsIRMA`
+
+4. Upload all scripts to scripts folder
 
 ### Install conda environment 
 conda environment (i.e. all software needed to conduct this analysis) is contained within the `cbird.yml` file. To install it, enter the following code in console: 
