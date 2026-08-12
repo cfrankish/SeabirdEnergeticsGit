@@ -22,25 +22,17 @@ library(ncdf4)
 library(gridExtra)
 library(tibble)
 
-### Step 0: Open input file ####
+### Step s2_1_0: Open input file ####
 
 # Read command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
-#print(input_file)
-#birds<-list.files("./data/birddata_ind/atlanticpuffin/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/northernfulmar/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/blackleggedkittiwake/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/commonguillemot/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/brunnichsguillemot/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/littleauk/", full.names=TRUE)
-#dataSpeciesIdSub<-fread(birds[1])
 dataSpeciesIdSub <- fread(input_file)	
 
 # Set-up number of iterations...
 overall.iterations<-100 # how many times this is calculated per individual
 
-#### Step 1: assign location of files & functions ####
+#### Step s2_1_1: assign location of files & functions ####
 
 # Source all necessary functions
 source("./scripts/functions.R")
@@ -52,9 +44,6 @@ irma.files<-irma.files[grepl("IRMAlocs", irma.files)]
 irma.files.df<-data.frame(irma.files)
 colnames(irma.files.df)<-c("FileName")
 irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Black-legged kittiwake", "Common guillemot", "Brünnich's guillemot")
-
-# Specify location of other metadata (information on body weights)
-list.activity.meta<-list.files("./data/metadata/", full.names=TRUE)
 
 # Determine model parameters to choose from #
 speciesNo<-6
@@ -89,7 +78,7 @@ c(72.2), c(72.2),
 0.0466, 0.0336, 0.0282, 0.05, 0.0282, 0.0282, # TC in air
 4.5, 9, 5.72, 4.5, 2, 2) # LCt in air
 
-#### Step 2: estimate winter activity & energy budgets ####
+#### Step s2_1_2: estimate winter activity & energy budgets ####
 
 # Set up lists to save results
 energyMonth<-list() # Monthly energy estimates
@@ -111,7 +100,6 @@ irmaFile<-readRDS(irma.file.sub$FileName)
 speciesName<-speciesSub
 speciesName<-gsub(" ", "", speciesName)
 speciesName<-gsub("ü", "u", speciesName)
-metaSub<-readRDS(list.activity.meta[grepl(speciesName, list.activity.meta)])
     
 # Determine bird id
 idSub<-dataSpeciesIdSub$individ_id[1]  
@@ -444,7 +432,6 @@ dev.off()
 
 print("Saving file...")
 output_file1 <- args[2]
-#output_file2 <- args[3]
 
 print("1")
 print(paste0("Sessions: ", n_distinct(energyDay$session_id)))

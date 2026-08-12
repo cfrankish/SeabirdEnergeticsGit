@@ -1,6 +1,6 @@
 ### This script merged location, environmental & wet-dry data. It is parallelized by species ###
 ### The data is time-matched with IRMA data (by ID & session ) - a few more tracks might thus disapear ###
-### It is location & time-matched with SST & ice data using rasters from copernicus ###
+### It is location & time-matched with env data using rasters from copernicus ###
 ### Each ten-minute wet-dry data is then assigned to day/night/twilight ###
 ### Files are then split into individual files for the next step
 ### Input will be a list of species to iterate through (maybe based existence of activity data? ###
@@ -11,8 +11,6 @@
 library(ggplot2)
 library(dplyr)
 library(fields)
-#library(rnaturalearth)
-#library(rnaturalearthdata)
 library(raster)
 library(fasterize)
 library(gdistance)
@@ -25,9 +23,8 @@ library(data.table)
 library(terra)
 library(ncdf4)
 library(gridExtra)
-library(seatrackR)
 
-### Step 0: Determine species of interest ####
+### Step s1_3_1: Determine species of interest ####
 
 # Read command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -50,9 +47,9 @@ speciesNameSave<-gsub("-", "", speciesNameSave)
 # Source all necessary functions
 source("./scripts/functions.R")
 
-### Step 1: Open up correct wet-dry data ###
+### Step s1_3_2: Open up correct wet-dry data ###
 
-print("Step 1: opening up wet-dry file..")
+print("Step s1_3_2: opening up wet-dry file..")
 
 # determine where act data is
 list.act.data<-list.files("./data/wetdry_raw/", full.names=TRUE)
@@ -62,9 +59,9 @@ act.data.species<-act.data[grepl(input_species, act.data)] # Subset to species o
 # Open species-specific immersion data
 act.data.sub<-fread(act.data.species[1])
 
-### Step 2: Merge wet-dry with positional data by session_id & extract environmental data ###
+### Step s1_3_3: Merge wet-dry with positional data by session_id & extract environmental data ###
 
-print("Step 2: merge wet-dry & env data...")
+print("Step s1_3_3: merge wet-dry & env data...")
 
 # Define some projections for later
 projection_NA<-"+proj=laea +x_0=0 +y_0=0 +lon_0=-9 +lat_0=61"
@@ -109,11 +106,9 @@ dplyr::filter(speciesOG==speciesName)
 infocol<-list()
 
 for (j in 1:length(colonies)) {
-
-#for (j in 1:2) {
  
 # Print status update to make it easier to de-bug 
-print(paste("Step 2: ", speciesName, ": Colony ", j, "/", length(colonies), sep=" ")) 
+print(paste("Step s1_3_3: ", speciesName, ": Colony ", j, "/", length(colonies), sep=" ")) 
   
 # Subset to colony j
 dataSpeciesCol<-subset(act.data.sub, colony==colonies[j]) 
@@ -125,8 +120,6 @@ birdsIDs<-unique(dataSpeciesCol$individ_id)
 infoid<-list()
 
 for (k in 1:length(birdsIDs)) {
-
-#for (k in 1:2) {
   
 print(paste("Colony ", j, "/", length(colonies), ", Bird", k, "/", length(birdsIDs), sep=" "))   
   
@@ -208,7 +201,7 @@ irmaSub_shorten$month<-as.numeric(substr(irmaSub_shorten$timestamp, 6, 7))
 irmaSub_shorten$year<-as.numeric(substr(irmaSub_shorten$timestamp, 1, 4))
 irmaSub_shorten$year_month<-paste(irmaSub_shorten$year, "Month", irmaSub_shorten$month, sep="_")
 
-# Determine unique set of month-year for extracting sst & ice data
+# Determine unique set of month-year for extracting environmental data
 dataSpeciesIdSub_shorten$year<-substr(dataSpeciesIdSub_shorten$date_time, 1, 4)
 dataSpeciesIdSub_shorten$month<-as.numeric(substr(dataSpeciesIdSub_shorten$date_time, 6, 7))
 dataSpeciesIdSub_shorten$year_month<-paste(dataSpeciesIdSub_shorten$year, "Month", dataSpeciesIdSub_shorten$month, sep="_")
@@ -237,7 +230,6 @@ sstProj<-terra::project(sstRast, distCoast)
 
 # Find relevant sea ice info
 iceRast<-rast(lox.ice[grepl(paste0(monthyearSub$year_month[1], ".nc"), lox.ice)])
-#values(iceRast)<-values(iceRast) - 273 # to change from kelvin to degrees C
 crs(iceRast)<-projection_84
 iceProj<-project(iceRast, distCoast)
 
@@ -260,7 +252,6 @@ colProj<-spTransform(colonySub, projection_NA)
 lox_sf_col<-st_as_sf(colProj)
 
 # Create extraction buffer
-#buffered_lox <- st_buffer(lox_sf, dist = 200000) # buffer of 200 km radius
 buffered_lox_col <- st_buffer(lox_sf_col, dist = 250000) # buffer of 500 km radius
 
 # Extract mean + sd (locations)
