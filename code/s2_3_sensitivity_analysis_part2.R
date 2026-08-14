@@ -1,7 +1,7 @@
 ### Here I plot how each parameter affects TEE_NB (total energy expended) & WEE_COV_NB (variation in weekly energy expenditure) ###
-### There are official input files but they are individual daily energy files (tmp2/id_energyDay.csv) produced by the previous script ###
+### There are no official input files but they are individual daily energy files (tmp2/id_energyDay.csv) produced by the previous script ###
 ### Output file is a csv showing how change in each parameter affects TEE_NB & WEE_COV_NB: ("./results/tables/supplementary/table0_sensitivityResults.csv") ###
-### This step also outputs two supplementary figures (XXX) ###
+### This step also outputs two supplementary figures (S9-S10) ###
 
 # load functions
 library(ggplot2)
@@ -24,9 +24,9 @@ library(tibble)
 # Read command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
-### Step 1: Determine location of sensitivity files... ###
+### Step s2_3_1: Determine location of sensitivity files... ###
 
-print(paste0("Step 1: determine location of sensitivity files..."))
+print(paste0("Step s2_3_1: determine location of sensitivity files..."))
 
 lox.results<-data.frame(files=list.files("tmp2/", full.names=TRUE))
 lox.results$size<-file.info(lox.results$files)$size
@@ -34,7 +34,7 @@ lox.results$size<-file.info(lox.results$files)$size
 # remove files with nothing inside
 lox.results.loop<-subset(lox.results, size>3)
 
-### Step 2: loop through results ###
+### Step s2_3_2: loop through results ###
 
 # Here I go through every individual file, subset to study period, and calculate total time spent activities + energy expended ###
 # I do this for every parameter - run combination #
@@ -66,7 +66,7 @@ species$allometryCoef<-c(0.765, 0.717, 0.689, 0.689, 0.689, 0.689)
 # Make a list to save results in
 sensitivityRes<-list()
 
-print("Step 2: calculate total time in activity + energy expended...")
+print("Step s2_3_2: calculate total time in activity + energy expended...")
 
 for (i in 1:nrow(lox.results.loop)) {
 
@@ -237,31 +237,6 @@ dplyr::select(species, Parameter, Run2, TEE_nb_diff_mean, TEE_nb_diff_ci_lower, 
 dplyr::rename(mean=TEE_nb_diff_mean, ci_lower=TEE_nb_diff_ci_lower, ci_upper=TEE_nb_diff_ci_upper) %>%
 dplyr::mutate(outputMetric="TEE_nb")
 
-#output3<-sensitivityResSum %>%
-#dplyr::select(species, Parameter, Run, tFlight_nb_diff_mean, tFlight_nb_diff_ci_lower, tFlight_nb_diff_ci_upper) %>%
-#dplyr::rename(mean=tFlight_nb_diff_mean, ci_lower=tFlight_nb_diff_ci_lower, ci_upper=tFlight_nb_diff_ci_upper) %>%
-#dplyr::mutate(outputMetric="TFlight_nb")
-
-#output4<-sensitivityResSum %>%
-#dplyr::select(species, Parameter, Run, tForage_nb_diff_mean, tForage_nb_diff_ci_lower, tForage_nb_diff_ci_upper) %>%
-#dplyr::rename(mean=tForage_nb_diff_mean, ci_lower=tForage_nb_diff_ci_lower, ci_upper=tForage_nb_diff_ci_upper) %>%
-#dplyr::mutate(outputMetric="TForage_nb")
-
-#output5<-sensitivityResSum %>%
-#dplyr::select(species, Parameter, Run, tLand_nb_diff_mean, tLand_nb_diff_ci_lower, tLand_nb_diff_ci_upper) %>%
-#dplyr::rename(mean=tLand_nb_diff_mean, ci_lower=tLand_nb_diff_ci_lower, ci_upper=tLand_nb_diff_ci_upper) %>%
-#dplyr::mutate(outputMetric="TLand_nb")
-
-#output6<-sensitivityResSum %>%
-#dplyr::select(species, Parameter, Run, tActive_nb_diff_mean, tActive_nb_diff_ci_lower, tActive_nb_diff_ci_upper) %>%
-#dplyr::rename(mean=tActive_nb_diff_mean, ci_lower=tActive_nb_diff_ci_lower, ci_upper=tActive_nb_diff_ci_upper) %>%
-#dplyr::mutate(outputMetric="TActive_nb")
-
-#output7<-sensitivityResSum %>%
-#dplyr::select(species, Parameter, Run, tRest_nb_diff_mean, tRest_nb_diff_ci_lower, tRest_nb_diff_ci_upper) %>%
-#dplyr::rename(mean=tRest_nb_diff_mean, ci_lower=tRest_nb_diff_ci_lower, ci_upper=tRest_nb_diff_ci_upper) %>%
-#dplyr::mutate(outputMetric="TWater_nb")
-
 sensitivityPlot<-rbind(output2)
 
 # Seperate runs	
@@ -338,7 +313,6 @@ geom_errorbar(data=sens3, aes(x=Parameter, ymin=ci_lower, ymax=ci_upper,  group=
 coord_flip() +
 ylim(-1.2, 1.2) +
 geom_hline(yintercept=0, linetype="dashed") +
-#scale_fill_manual(values=c("grey")) +
 theme_bw() +
 facet_wrap(~outputMetric + species) +
 scale_fill_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +

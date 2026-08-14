@@ -22,22 +22,14 @@ library(ncdf4)
 library(gridExtra)
 library(tibble)
 
-### Step 0: Open input file ####
+### Step s2_2_0: Open input file ####
 
 # Read command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
-#print(input_file)
-#birds<-list.files("./data/birddata_ind/atlanticpuffin/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/northernfulmar/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/blackleggedkittiwake/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/commonguillemot/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/brunnichsguillemot/", full.names=TRUE)
-#birds<-list.files("./data/birddata_ind/littleauk/", full.names=TRUE)
-#dataSpeciesIdSub<-fread(birds[1])
 dataSpeciesIdSub <- fread(input_file)	
 
-#### Step 1: assign location of files & functions ####
+#### Step s2_2_1: assign location of files & functions ####
 
 # Source all necessary functions
 source("./scripts/functions.R")
@@ -85,7 +77,7 @@ c(0.0466, 0.0466-0.1*0.0466, 0.0466 + 0.1*0.0466), c(0.0336, 0.0336-0.1*0.0336, 
 c(0.05, 0.05-0.1*0.05, 0.05+0.1*0.05), c(0.0282, 0.0282-0.1*0.0282, 0.0282 +0.1*0.0282), c(0.0282, 0.0282-0.1*0.0282, 0.0282 +0.1*0.0282),
 c(4.5, 4.5, 13.8), c(9, 3.63, 10.8), c(5.72, 5.72, 13.8), c(4.5, 4.5, 10.5), c(2, 2, 11.3), c(2, 2, 9.4)) # LCT air
 
-#### Step 2: estimate winter activity & energy budgets ####
+#### Step s2_2_2: estimate winter activity & energy budgets ####
 
 # Set up lists to save results
 energyDay<-list() # Daily energy estimates
