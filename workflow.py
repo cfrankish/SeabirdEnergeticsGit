@@ -17,42 +17,11 @@ from glob import glob
 
 gwf = Workflow(defaults={"account": "nn11080k"}) # Remember to change account number as needed!
 
-############################################################################
-### Step 1_1: Extract wet-dry data from SEATRACK database ##################
-############################################################################
+###########################################################################################
+### Step 1_3: Merge, clean data streams & split into individual bird files ################
+###########################################################################################
 
-import csv
-import time
-import re
-
-# Get today's date in YYYY-MM-DD format
-today = time.strftime("%Y-%m-%d", time.localtime())
-
-# Create list of species to iterate through
-species_list = ["Littleauk", "Northernfulmar", "Atlanticpuffin", "Blackleggedkittiwake", "Commonguillemot", "Brunnichsguillemot"]
-
-# Generate a GWF target per species
-for sp in species_list:
-    output_file = f"data/{sp}_wetdry_{today}.csv"
-    
-    # Create GWF target for each species
-    gwf.target(
-        name=f"s1_1_wetdry_{sp}",
-        inputs=[],
-        outputs=[output_file],
-        queue="bigmem",
-        cores=1,
-        memory="50G",
-        walltime="12:00:00"
-    ) << f"""
-    Rscript scripts/s1_1_extract_wetdry.R {sp} {today} {output_file}
-    """
-    
-############################################################################
-### Step 1_2: Clean data & split into individual bird files ################
-############################################################################
-
-# Directory containing the CSV files
+# Determine the directory containing individual csv files #
 csv_dir_wetdry = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/data/wetdry_raw"
 
 # Find all CSV files in the directory
@@ -76,7 +45,7 @@ for csv_file in csv_files_wetdry:
         queue="bigmem",
         cores=1,
         memory="50G",
-        walltime="80:00:00"
+        walltime="30:00:00"
     ) << f"""
 Rscript scripts/s1_3_merge_wetdry_lox_env.R {clean_base_name} {output_files1} 
 """    
@@ -242,20 +211,17 @@ endDate = "2022-04-15"
 # Determine input & output files 
 input_files1 = f"./results/tables/main/table1_idcatalogue.csv"  # Add actual input files if necessary 
 output_files1 = f"./results/tables/main/table5_migratory_distance.csv"    # Table with individual migratory distance
-#output_files2 = f"./results/tables/main/table6_migratory_distance_sst_anomaly.csv" # Table with individual migratory distance
-output_files3 = f"./results/tables/main/table7_species_mean_deviance.csv" # Table with species deviance in WEE, weighted for varying sample size
-output_files4 = f"./results/tables/main/table8_population_mean_deviance.csv" # Table with population deviance in WEE
 
 gwf.target(
     name="s4_2_analysis_calc_metrics",
     inputs=input_files1,
-    outputs=[output_files1, output_files3, output_files4],
+    outputs=[output_files1],
     queue="bigmem",
     cores=1,
     memory="80G",
     walltime="72:00:00"
 ) << f"""
-Rscript scripts/s4_2_mainanalysis_calc_metrics.R {input_files1} {startDate} {endDate} {output_files1} {output_files3} {output_files4} 
+Rscript scripts/s4_2_mainanalysis_calc_metrics.R {input_files1} {startDate} {endDate} {output_files1} 
 """
 
 #######################################################################
@@ -267,353 +233,53 @@ startDate = "2021-09-15"
 endDate = "2022-04-15"
 
 # Determine intput and output files
-output_files1 = f"./results/tables/main/table9_totalNBCosts.csv"
-output_files2 = f"./results/tables/main/table10_stats3_dredge_nbCosts.csv"
-output_files3 = f"./results/tables/main/table11_cluster_pop.csv"
-output_files4 = f"./results/tables/main/table12_stats4_dredge_nbCosts_species.csv"
-output_files5 = f"./results/tables/main/table13_stats5_dredge_nbCosts_deviance.csv"
-output_files6 = f"./results/tables/main/table14_stats6_dredge_nbCosts_cov.csv"
+output_files1 = f"./results/tables/main/table6_totalNBCosts.csv"
+output_files2 = f"./results/tables/main/table7_stats_WEE_vs_TEE.csv"
+output_files3 = f"./results/tables/main/table8_stats_WEE_vs_pred.csv"
+output_files4 = f"./results/tables/main/table9_stats_TEE_vs_pred.csv"
 
 gwf.target(
     name="s4_3_anaysis_weekly_vs_tot_energy",
     inputs=[], 
-    outputs=[output_files1, output_files2, output_files3, output_files4, output_files5, output_files6],
+    outputs=[output_files1, output_files2, output_files3, output_files4],
     queue="bigmem",
     cores=1,
     memory="50G",
     walltime="72:00:00"
 ) << f"""
-Rscript scripts/s4_3_mainanalysis_statistics.R {startDate} {endDate} {output_files1} {output_files2} {output_files3} {output_files4} {output_files5} {output_files6}
+Rscript scripts/s4_3_mainanalysis_statistics.R {startDate} {endDate} {output_files1} {output_files2} {output_files3} {output_files4} 
 """
 
-#####################################################################################
-### Step 5_1: Determine distribution of activity budgets per pop (non spatial) ######
-#####################################################################################
+#######################################################################
+### Step 4_4: Supplementary analysis (extra) - effect sizes ###########
+#######################################################################
+ 
+# Determine study period 
+startDate = "2021-09-15"
+endDate = "2022-04-15"
 
-# Directory containing the CSV files
-nc_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/data/popdata_raw"
-
-# Find all CSV files in the directory
-nc_files = glob(os.path.join(nc_dir, "*.nc"))
-
-# Define secondary input file
-input_file2 = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/results/tables/main/table1_idcatalogue.csv"
-
-# Process each CSV file
-for nc_file in nc_files:
-    
-    # Get just the file name
-    filename = os.path.basename(nc_file)  # "file1.nc"
-    
-    # Remove the extension
-    name_no_ext = filename.replace(".nc", "")
-
-    # Split by underscore
-    parts = name_no_ext.split("_")
-
-    # Extract the species (4th and 5th parts)
-    bird_species = f"{parts[3]}_{parts[4]}"
-    input_files = [nc_file, input_file2]
-    
-    # Determine intput and output files
-    output_files1 = f"./results/tables/supplementary/{bird_species}_actBudget.csv"
-    
-    gwf.target(
-        name=f"s5_1_1_prep_activity_temporal_{bird_species}",
-        inputs=input_files,
-        outputs=[output_files1],
-        cores=1,
-        memory="8G",
-        walltime="04:00:00"
-    ) << f"""
-    mkdir -p tmp/
-    Rscript scripts/s5_1_1_prep_activity_distribution_temporal.R {nc_file} {input_file2} {output_files1}
-    """   
-    
-#########################################################################################
-### Step 5_2: Map energy expenditure (assume same behaviour regardless of location ######
-#########################################################################################
-
-# Directory containing the CSV files
-budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
-
-# Find all CSV files in the directory
-budget_files = glob(os.path.join(budget_dir, "*monthly.csv"))
-
-# Ensure tmp4 exists
-os.makedirs("./tmp4", exist_ok=True)
-
-# Process each CSV file
-for budget_file in budget_files:
-    
-    # Get just the file name
-    filename = os.path.basename(budget_file)  
-    
-    # Remove the extension
-    name_no_ext = filename.replace(".csv", "")
-    
-    # Remove special characters
-    name_no_ext_clean = (name_no_ext
-               .replace("(", "")
-               .replace(")", "")
-               .replace(",", "")
-               .replace("'", "")
-               .replace("–", "")
-               .replace("ý", "")
-               .replace("ð", "")
-               .replace("ó", "")
-               .replace("á", "")
-               .replace(":", "")
-               .replace("í", "")
-               .replace("`", "")
-               .replace("ú", "")
-               .replace("é", ""))
-    
-    
-    # Remove special characters
-    budget_clean = (budget_file
-               .replace("(", "")
-               .replace(")", "")
-               .replace("`", "")
-               .replace("'", ""))
-    
-    # Define the input file
-    input_files = [budget_file]
-    
-    # Determine intput and output files
-    output_files1 = f"./tmp4/{name_no_ext_clean}_energyMap.csv"
-    
-    gwf.target(
-        name=f"s5_2_1_map_energy_{name_no_ext_clean}",
-        inputs=input_files,
-        outputs=[output_files1],
-        cores=1,
-        memory="8G",
-        walltime="04:00:00"
-    ) << f"""
-    mkdir -p tmp/
-    Rscript scripts/s5_2_1_map_energy_v1.R {budget_file} {output_files1}
-    """       
-    
-##################################
-### Step 5_3: Map activity  ######
-##################################
-
-# Directory containing the CSV files
-budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
-
-# Find all CSV files in the directory
-budget_files = glob(os.path.join(budget_dir, "*daily.csv"))
-
-# Ensure tmp4 exists
-os.makedirs("./tmp4", exist_ok=True)
-
-# Process each CSV file
-for budget_file in budget_files:
-    
-    # Get just the file name
-    filename = os.path.basename(budget_file)  
-    
-    # Remove the extension
-    name_no_ext = filename.replace(".csv", "")
-    
-    # Remove special characters
-    name_no_ext_clean = (name_no_ext
-               .replace("(", "")
-               .replace(")", "")
-               .replace(",", "")
-               .replace("'", "")
-               .replace("–", "")
-               .replace("ý", "")
-               .replace("ð", "")
-               .replace("ó", "")
-               .replace("á", "")
-               .replace(":", "")
-               .replace("í", "")
-               .replace("`", "")
-               .replace("ú", "")
-               .replace("é", ""))
-    
-    
-    # Remove special characters
-    budget_clean = (budget_file
-               .replace("(", "")
-               .replace(")", "")
-               .replace("`", "")
-               .replace("'", ""))
-    
-    # Define the input file
-    input_files = [budget_file]
-    
-    # Determine intput and output files
-    output_files1 = f"./tmp4/{name_no_ext_clean}_activityMap.csv"
-    
-    gwf.target(
-        name=f"s5_3_map_activity_monthly_{name_no_ext_clean}",
-        inputs=input_files,
-        outputs=[output_files1],
-        cores=1,
-        memory="8G",
-        walltime="04:00:00"
-    ) << f"""
-    mkdir -p tmp/
-    Rscript scripts/s5_3_map_activity.R {budget_file} {output_files1}
-    """    
-    
-##################################
-### Step 5_3: Map activity - yearly  ######
-##################################
-
-# Directory containing the CSV files
-budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
-
-# Find all CSV files in the directory
-budget_files = glob(os.path.join(budget_dir, "*daily.csv"))
-
-# Ensure tmp4 exists
-os.makedirs("./tmp4", exist_ok=True)
-
-# Process each CSV file
-for budget_file in budget_files:
-    
-    # Get just the file name
-    filename = os.path.basename(budget_file)  
-    
-    # Remove the extension
-    name_no_ext = filename.replace(".csv", "")
-    
-    # Remove special characters
-    name_no_ext_clean = (name_no_ext
-               .replace("(", "")
-               .replace(")", "")
-               .replace(",", "")
-               .replace("'", "")
-               .replace("–", "")
-               .replace("ý", "")
-               .replace("ð", "")
-               .replace("ó", "")
-               .replace("á", "")
-               .replace(":", "")
-               .replace("í", "")
-               .replace("`", "")
-               .replace("ú", "")
-               .replace("é", ""))
-    
-    
-    # Remove special characters
-    budget_clean = (budget_file
-               .replace("(", "")
-               .replace(")", "")
-               .replace("`", "")
-               .replace("'", ""))
-    
-    # Define the input file
-    input_files = [budget_file]
-    
-    # Determine intput and output files
-    output_files1 = f"./tmp4/{name_no_ext_clean}_activityMap_yearly.csv"
-    
-    gwf.target(
-        name=f"s5_3_map_activity_yearly_{name_no_ext_clean}",
-        inputs=input_files,
-        outputs=[output_files1],
-        cores=1,
-        memory="8G",
-        walltime="04:00:00"
-    ) << f"""
-    mkdir -p tmp/
-    Rscript scripts/s5_3_map_activity_winter.R {budget_file} {output_files1}
-    """    
-
-##############################################################
-### Step 5_4: Aggregate activity - spatially mapped  #########
-##############################################################
-
-import re
-
-# Directory containing the CSV files
-budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp4"
-
-# Find all CSV files in the directory
-budget_files = glob(os.path.join(budget_dir, "*.csv"))
-
-# Extract species names
-results = [re.findall(r"tmp4/([^_]+)_", str(p))[0] for p in budget_files]
-unique_names = set(results)
-
-# Process each CSV file
-for name in unique_names:
-    # Define output files
-    output_file1 = f"./results/tables/{name}_activityMap_WeightedMean.csv"
-    output_file2 = f"./results/tables/{name}_activityMap_WeightedSD.csv"
-    
-    gwf.target(
-        name=f"s5_4_aggregate_maps_{name}",
-        inputs=[],
-        outputs=[output_file1, output_file2],
-        cores=1,
-        memory="8G",
-        walltime="04:00:00",
-    ) << f"""
-    Rscript scripts/s5_4_aggregate_maps_activity_spatial.R {name} {output_file1} {output_file2}
-    """     
-
-##############################################################
-### Step 5_4: Aggregate energy - non-spatial activity  #######
-##############################################################
-
-import re
-
-# Directory containing the CSV files
-budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp4"
-
-# Find all CSV files in the directory
-budget_files = glob(os.path.join(budget_dir, "*.csv"))
-
-# Extract species names
-results = [re.findall(r"tmp4/([^_]+)_", str(p))[0] for p in budget_files]
-unique_names = set(results)
-
-# Process each CSV file
-for name in unique_names:
-    # Define output files
-    output_file1 = f"./results/tables/{name}_energyMap_monthly.csv"
-    
-    gwf.target(
-        name=f"s5_4_aggregate_maps_energy_{name}",
-        inputs=[],
-        outputs=[output_file1],
-        queue="bigmem",
-        cores=1,
-        memory="20G",
-        walltime="10:00:00",
-    ) << f"""
-    Rscript scripts/s5_3_1_aggregate_maps_energy_species_v1.R {name} {output_file1}
-    """         
-    
-######################################################################
-### Step 5_5: Aggregate energy - non-spatial activity - total  #######
-######################################################################
-
-# Define output files
-output_file1 = f"./results/tables/allBirds_energyMap_monthly.csv"
+# Determine intput and output files
+input_files1 = f"./results/tables/main/table6_totalNBCosts.csv"
+input_files2 = f"./results/tables/main/table7_stats_WEE_vs_TEE.csv"
+input_files3 = f"./results/tables/main/table8_stats_WEE_vs_pred.csv"
+input_files4 = f"./results/tables/main/table9_stats_TEE_vs_pred.csv"
 
 gwf.target(
-    name="s5_5_aggregate_maps_energy_all",
-    inputs=[],
-    outputs=[output_file1],
+    name="s4_4_effectSize_vs_reps",
+    inputs=[input_files1, input_files2, input_files3, input_files4], 
+    outputs=[],
     queue="bigmem",
     cores=1,
-    memory="20G",
-    walltime="10:00:00"
+    memory="50G",
+    walltime="72:00:00"
 ) << f"""
-Rscript scripts/s5_5_aggregate_maps_energy_all.R {output_file1}
-"""
-   
+Rscript scripts/s4_3_mainanalysis_statistics.R {startDate} {endDate} {input_files1} {input_files2} {input_files3} {input_files4} 
 
-########################################################################
-### Step XX: For Lila - Calculate activity budgets every day of year ###
-########################################################################
+"""
+
+#######################################################################
+### Step 8: For Lila - Calculate activity budgets every day of year ###
+#######################################################################
 
 import csv
 import time
@@ -667,27 +333,435 @@ for sp in species_list:
         queue="bigmem",
         cores=1,
         memory="50G",
-        walltime="12:00:00"
+        walltime="72:00:00"
     ) << f"""
     mkdir -p results
     Rscript scripts/forLila.R {sp} {today} {output_file}
     """
+   
+#####################################################################################
+### Step 5_1: Determine distribution of activity budgets per pop (non spatial) ######
+#####################################################################################
+
+# Directory containing the CSV files
+nc_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/data/popdata_raw"
+
+# Find all CSV files in the directory
+nc_files = glob(os.path.join(nc_dir, "*.nc"))
+
+# Define secondary input file
+input_file2 = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/results/tables/main/table1_idcatalogue.csv"
+
+# Process each CSV file
+for nc_file in nc_files:
     
-#######################################################################
-### Step XX: Extra analysis for Seb - make Svalbard bird energetic ###
-#######################################################################
- 
-# Determine intput and output files
-input_files1 = f"./results/tables/main/table1_idcatalogue.csv"
-output_files1 = f"./results/tables/main/seb_svalbard_energy.csv"
+    # Get just the file name
+    filename = os.path.basename(nc_file)  # "file1.nc"
+    
+    # Remove the extension
+    name_no_ext = filename.replace(".nc", "")
+
+    # Split by underscore
+    parts = name_no_ext.split("_")
+
+    # Extract the species (4th and 5th parts)
+    bird_species = f"{parts[3]}_{parts[4]}"
+    input_files = [nc_file, input_file2]
+    
+    # Determine intput and output files
+    output_files1 = f"./results/tables/supplementary/{bird_species}_actBudget.csv"
+    
+    gwf.target(
+        name=f"s5_1_1_prep_activity_temporal_{bird_species}",
+        inputs=input_files,
+        outputs=[output_files1],
+        cores=1,
+        memory="8G",
+        walltime="04:00:00"
+    ) << f"""
+    mkdir -p tmp/
+    Rscript scripts/s5_1_1_prep_activity_distribution_temporal.R {nc_file} {input_file2} {output_files1}
+    """   
+    
+###############################################
+### Step 5_1_2: Is activity spatial?  #########
+###############################################
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*daily.csv"))
+
+# Ensure tmp4 exists
+os.makedirs("./tmp4", exist_ok=True)
+
+# Make a list of species to loop through:
+species=["Blackleggedkittiwake", "Littleauk", "Commonguillemot", "Northernfulmar", "Atlanticpuffin", "Brunnichsguillemot"]
+
+# Make a list of months to loop through:
+months = [9, 10, 11, 12, 1, 2, 3, 4]
+
+# Make a list of behaviours to loop through:
+beh = ["Forage", "RestWater", "Active", "Land", "Flight"]
+
+# Define secondary input file
+input_file2 = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/results/tables/main/table1_idcatalogue.csv"
+
+# Process files for each species
+for speciesSub in species:
+
+    # Loop over months and behaviours
+    for m in months:
+        for b in beh:
+
+            # Output name includes month + behaviour
+            output_file1 = f"./tmp4/{speciesSub}_{b}_m{m}_stats.csv"
+            output_file2 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam1.rds" # No spatial component
+            output_file3 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam2.rds" # spatial (species-level)
+            output_file4 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam3.rds" # spatial with population deviations
+
+            # Define inputs
+            input_files = [input_file2]
+
+            gwf.target(
+                name=f"s5_1_2_test_spatial_{speciesSub}_{b}_m{m}",
+                inputs=input_files,
+                outputs=[output_file1, output_file2, output_file3, output_file4],
+                queue="bigmem",
+                cores=1,
+                memory="20G",
+                walltime="72:00:00"
+            ) << f"""
+            mkdir -p tmp/
+            Rscript scripts/s5_1_2_is_activity_spatial.R {speciesSub} {input_file2} {b} {m} {output_file1} {output_file2} {output_file3} {output_file4}
+            """
+
+###############################################
+### Step 5_1_3: Is activity spatial?  #########
+###############################################
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*daily.csv"))
+
+# Ensure tmp4 exists
+os.makedirs("./tmp4", exist_ok=True)
+
+# Make a list of species to loop through:
+species=["Blackleggedkittiwake", "Littleauk", "Commonguillemot", "Northernfulmar", "Atlanticpuffin", "Brunnichsguillemot"]
+
+# Make a list of months to loop through:
+months = [9, 10, 11, 12, 1, 2, 3, 4]
+
+# Make a list of behaviours to loop through:
+beh = ["Forage", "RestWater", "Active", "Land", "Flight"]
+
+# Define secondary input file
+input_file2 = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/results/tables/main/table1_idcatalogue.csv"
+
+# Process files for each species
+for speciesSub in species:
+
+    # Loop over months and behaviours
+    for m in months:
+        for b in beh:
+
+            # Output name includes month + behaviour
+            output_file1 = f"./tmp4/{speciesSub}_{b}_m{m}_stats_v2.csv"
+            output_file2 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam1_v2.rds" # No spatial component
+            output_file3 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam2_v2.rds" # spatial (species-level)
+            output_file4 = f"./tmp4/{speciesSub}_{b}_m{m}_rasters_gam3_v2.rds" # spatial with population deviations
+
+            # Define inputs
+            input_files = [input_file2]
+
+            gwf.target(
+                name=f"s5_1_3_test_spatial_{speciesSub}_{b}_m{m}",
+                inputs=input_files,
+                outputs=[output_file1, output_file2, output_file3, output_file4],
+                queue="bigmem",
+                cores=1,
+                memory="20G",
+                walltime="72:00:00"
+            ) << f"""
+            mkdir -p tmp/
+            Rscript scripts/s5_1_3_is_activity_spatial_part2.R {speciesSub} {input_file2} {b} {m} {output_file1} {output_file2} {output_file3} {output_file4}
+            """
+
+###########################################################################################
+### Step 5_2_1: Map energy expenditure (assume same behaviour regardless of location ######
+###########################################################################################
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*monthly.csv"))
+
+# Ensure tmp4 exists
+os.makedirs("./tmp5", exist_ok=True)
+
+# Process each CSV file
+for budget_file in budget_files:
+    
+    # Get just the file name
+    filename = os.path.basename(budget_file)  
+    
+    # Remove the extension
+    name_no_ext = filename.replace(".csv", "")
+    
+    # Remove special characters
+    name_no_ext_clean = (name_no_ext
+               .replace("(", "")
+               .replace(")", "")
+               .replace(",", "")
+               .replace("'", "")
+               .replace("–", "")
+               .replace("ý", "")
+               .replace("ð", "")
+               .replace("ó", "")
+               .replace("á", "")
+               .replace(":", "")
+               .replace("í", "")
+               .replace("`", "")
+               .replace("ú", "")
+               .replace("é", ""))
+    
+    
+    # Remove special characters
+    budget_clean = (budget_file
+               .replace("(", "")
+               .replace(")", "")
+               .replace("`", "")
+               .replace("'", ""))
+    
+    # Define the input file
+    input_files = [budget_file]
+    
+    # Determine intput and output files
+    output_files1 = f"./results/tables/supplementary/{name_no_ext_clean}_energyMap.csv"
+    
+    gwf.target(
+        name=f"s5_2_1_map_energy_{name_no_ext_clean}",
+        inputs=input_files,
+        outputs=[output_files1],
+        cores=1,
+        memory="8G",
+        walltime="24:00:00"
+    ) << f"""
+    mkdir -p tmp/
+    Rscript scripts/s5_2_1_map_energy_v1.R {budget_file} {output_files1}
+    """       
+
+###########################################################################################
+### Step 5_2_2: Map energy expenditure (spatialized #######################################
+###########################################################################################
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp3"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*monthly.csv"))
+
+# Ensure tmp4 exists
+os.makedirs("./tmp5", exist_ok=True)
+
+# Process each CSV file
+for budget_file in budget_files:
+    
+    # Get just the file name
+    filename = os.path.basename(budget_file)  
+    
+    # Remove the extension
+    name_no_ext = filename.replace(".csv", "")
+    
+    # Remove special characters
+    name_no_ext_clean = (name_no_ext
+               .replace("(", "")
+               .replace(")", "")
+               .replace(",", "")
+               .replace("'", "")
+               .replace("–", "")
+               .replace("ý", "")
+               .replace("ð", "")
+               .replace("ó", "")
+               .replace("á", "")
+               .replace(":", "")
+               .replace("í", "")
+               .replace("`", "")
+               .replace("ú", "")
+               .replace("é", ""))
+    
+    
+    # Remove special characters
+    budget_clean = (budget_file
+               .replace("(", "")
+               .replace(")", "")
+               .replace("`", "")
+               .replace("'", ""))
+    
+    # Define the input file
+    input_files = [budget_file]
+    
+    # Determine intput and output files
+    output_files1 = f"./results/tables/supplementary/{name_no_ext_clean}_energyMap_v2.csv"
+    
+    gwf.target(
+        name=f"s5_2_2_map_energy_spatial_{name_no_ext_clean}",
+        inputs=input_files,
+        outputs=[output_files1],
+        cores=1,
+        memory="8G",
+        walltime="10:00:00"
+    ) << f"""
+    mkdir -p tmp/
+    Rscript scripts/s5_2_2_map_energy_v2.R {budget_file} {output_files1}
+    """       
+    
+################################################################
+### Step 5_3_1: Aggregate energy - non-spatial activity  #######
+################################################################
+
+import re
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp5"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*.csv"))
+
+# Extract species names
+results = [re.findall(r"tmp5/([^_]+)_", str(p))[0] for p in budget_files]
+unique_names = set(results)
+
+# Process each CSV file
+for name in unique_names:
+    # Define output files
+    output_file1 = f"./results/tables/{name}_energyMap_monthly_map_v1.csv"
+    output_file2 = f"./results/tables/{name}_energyMap_monthly_sum_v1.csv"
+    
+    gwf.target(
+        name=f"s5_3_1_aggregate_maps_energy_{name}",
+        inputs=[],
+        outputs=[output_file1, output_file2],
+        queue="bigmem",
+        cores=1,
+        memory="20G",
+        walltime="10:00:00",
+    ) << f"""
+    Rscript scripts/s5_3_1_aggregate_maps_energy_species_v1.R {name} {output_file1} {output_file2} 
+    """    
+
+################################################################
+### Step 5_3_2: Aggregate energy - spatial activity  ###########
+################################################################
+
+import re
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp5"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*.csv"))
+
+# Extract species names
+results = [re.findall(r"tmp5/([^_]+)_", str(p))[0] for p in budget_files]
+unique_names = set(results)
+
+# Process each CSV file
+for name in unique_names:
+    # Define output files
+    output_file1 = f"./results/tables/{name}_energyMap_monthly_map_v2.csv"
+    output_file2 = f"./results/tables/{name}_energyMap_monthly_sum_v2.csv"
+    
+    gwf.target(
+        name=f"s5_3_2_aggregate_maps_energy_{name}",
+        inputs=[],
+        outputs=[output_file1, output_file2],
+        queue="bigmem",
+        cores=1,
+        memory="20G",
+        walltime="10:00:00",
+    ) << f"""
+    Rscript scripts/s5_3_2_aggregate_maps_energy_species_v2.R {name} {output_file1} {output_file2} 
+    """        
+
+################################################################
+### Step 5_3_3: Compare both methods, species by species #######
+################################################################
+
+import re
+
+# Directory containing the CSV files
+budget_dir = "/cluster/projects/nn11080k/cfrank93/cbirdEnergy/tmp5"
+
+# Find all CSV files in the directory
+budget_files = glob(os.path.join(budget_dir, "*.csv"))
+
+# Extract species names
+results = [re.findall(r"tmp5/([^_]+)_", str(p))[0] for p in budget_files]
+unique_names = set(results)
+
+# Process each CSV file
+for name in unique_names:
+    
+    # Define output files
+    input_file1 = f"./results/tables/{name}_energyMap_monthly_map_v1.csv"
+    input_file2 = f"./results/tables/{name}_energyMap_monthly_map_v2.csv"
+    input_file3 = f"./results/tables/{name}_energyMap_monthly_sum_v1.csv"
+    input_file4 = f"./results/tables/{name}_energyMap_monthly_sum_v2.csv"
+    
+    output_file1 = f"./results/tables/{name}_energyMap_monthly_sums.csv"
+    
+    gwf.target(
+        name=f"s5_3_3_compare_energy_{name}",
+        inputs=[input_file1, input_file2, input_file3, input_file4],
+        outputs=[output_file1],
+        queue="bigmem",
+        cores=1,
+        memory="20G",
+        walltime="5:00:00",
+    ) << f"""
+    Rscript scripts/s5_3_3_compare.R {input_file1} {input_file2} {input_file3} {input_file4} {output_file1} 
+    """     
+
+################################################################
+### Step 5_4_1: Aggregate everything ###########################
+################################################################
+
+# Determine names of input & output files # 
+output_files1 = f"./results/tables/tablex_allenergy_v1.csv"
 
 gwf.target(
-    name="forSeb",
-    inputs=[input_files1], 
+    name="s5_4_1_aggregate_all_energy_v1",
+    inputs=[],
     outputs=[output_files1],
+    queue="bigmem",
+    cores=1,
+    memory="50G",
+    walltime="20:00:00"
+) << f"""
+Rscript scripts/s5_4_1_aggregate_maps_energy_all_v1.R {output_files1} 
+"""
+
+################################################################
+### Step 5_5_1: Identify energy demand hotspots ################
+################################################################
+
+# Define output files
+output_file1 = f"./results/tables/energyhotspots.csv"
+
+gwf.target(
+    name="s5_5_1_identify_hotspots",
+    inputs=[],
+    outputs=[output_file1],
+    queue="bigmem",
     cores=1,
     memory="10G",
-    walltime="72:00:00"
+    walltime="20:00:00"
 ) << f"""
-Rscript scripts/s2_4_energy_seb.R {input_files1} {output_files1} 
+Rscript scripts/s5_5_1_identify_hotspots.R {output_file1} 
 """
