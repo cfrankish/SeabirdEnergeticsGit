@@ -20,5 +20,6 @@
 
 ### Step 4 mainly conducts the main analysis:
 - `S4_1_mainanalysis_plot_maps_budgets.R`: This script maps the distribution of the study populations and their non-breeding season distributions (Figures 1, S1 & S2). It also estimates yearly activity budgets, SST & energy expenditure at a species and population-level for visual exploration.
-- `S4_2_mainanalysis_calc_metrics.R`: This script calculates migratory distance and weekly variation in energy expenditure used to make Figure 3B. It also outputs all supplementary figures showing weekly deviation in different behaviours & SST (Figures S15-S20).
-- `S4_3_mainanalysis_calc_metrics.R`: This script conducts all statistics in the manuscript. It outputs figures 2, 3A & all remaining supplementary figures (Figures S8, 12-14, 21-34). 
+- `S4_2_mainanalysis_calc_metrics.R`: This script calculates migratory distance and weekly variation in energy expenditure used to make Figure 3B. It also outputs all supplementary figures showing weekly deviation in different behaviours & SST (Figures S16-S21).
+- `S4_3_mainanalysis_calc_metrics.R`: This script conducts all statistics in the manuscript. It outputs figures 2, 3A & all remaining supplementary figures (Figures S8, 14-34).
+- `S4_4_effectSizes.R`: This script looks at effect of iteration number on effect sizes -> takes as input files the outputs from the previous script and outputs Figure S13. 
