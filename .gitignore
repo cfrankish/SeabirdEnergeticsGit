@@ -11,7 +11,18 @@ data/intermediate/*
 !data/intermediate/README.md
 data/archive/*
 !data/archive/README.md
-
+data/ice/*
+!data/ice/README.md
+data/sst/*
+!data/sst/README.md
+data/temp/*
+!data/temp/README.md
+data/wetdry_database/*
+!data/wetdry_database/README.md
+data/wetdry_raw/*
+!data/wetdry_raw/README.md
+data/positionsIRMA/*
+!data/positionsIRMA/README.md
 ## ignore any junk created in code folder
 code/*.rds
 code/*.Rdata
@@ -19,3 +30,4 @@ code/*.RData
 code/*.Rhistory
 code/*.Rproj.user
 code/*.Rproj
+.Renviron
