@@ -1,8 +1,8 @@
 # This script starts by creating an ID catalogue of all birds for which we have energy files to make the following steps easier #
-# Otherwise, what it is really doing is carrying out ana analysis to determine how many iterations we need before estimates of energy expenditure stabilize #
+# Otherwise, what it is really doing is carrying out an analysis to determine how many iterations we need before estimates of energy expenditure stabilize #
 # This number is carried through the rest of the analysis #
 # Input files are start & end dates of the study period #
-# Output file is a table with total non-breeding energy expenditure vs. number of iterarions as well as a figure showing this (Figure S11): "./results/tables/supplementary/table1_miniteration.csv" #
+# Output file is a table with total non-breeding energy expenditure & WEE_cov_nb vs. number of iterarions as well as two figures showing this (Figures S11 & S12): "./results/tables/supplementary/table1_miniteration.csv" #
 
 # load functions
 library(ggplot2)
@@ -29,22 +29,16 @@ args <- commandArgs(trailingOnly = TRUE)
 startDate<-args[1] # Read-in start of study period
 endDate<-args[2] # Read-in end date of study period
 
-### Step 1: Load all individual Ids from result files ###
+### Step s3_1_1: Load all individual Ids from result files ###
 
 # This is so we can loop through them later #
 
 allResults<-list.files("./tmp", full.names=TRUE)
 energyRes_day<-allResults[grepl("energyDay", allResults)]
 
-# energyRes_day<-sample(energyRes_day, 100, replace=FALSE)
-
 energyAll<-list() 
 
-print("Step 1: making catalogue of energy files...")
-
-energyAll<-list() 
-
-print("Step 1: making catalogue of energy files...")
+print("Step s3_1_1: making catalogue of energy files...")
 
 for (i in 1:length(energyRes_day)) {
   
@@ -69,9 +63,9 @@ output_file1 <- args[3]
 print("Saving output file 1")
 write.csv(energyAll, file = output_file1, row.names = FALSE) # directory of all ids that will be re-used after
 
-### Step 2: Calculate minimum iteration number ###
+### Step s3_1_2: Calculate minimum iteration number ###
 
-print("Step 2: determine minimum sample size per pop")
+print("Step s3_1_2: determine minimum sample size per pop")
 
 # First we make a list of populations
 
@@ -356,5 +350,3 @@ dev.off()
 output_file2 <- args[4]
 print("Saving output file 2")
 write.csv(minInterationNoRes, file = output_file2, row.names = FALSE) # Table for calculation min number of iterations
- 
-

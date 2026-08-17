@@ -21,14 +21,12 @@ library(data.table)
 library(terra)
 library(ncdf4)
 library(gridExtra)
-#library(ggridges)
-#library(adehabitatHR)
 
 args <- commandArgs(trailingOnly = TRUE)
 
-### Step 0: set-up sample size & iteration number ###
+### Step s3_2_0: set-up sample size & iteration number ###
 
-print("Step 0: setting up initial parameters")
+print("Step s3_2_0: setting up initial parameters")
 
 # Set up minimum sample size & number of iterations
 minSampleSize<-5
@@ -36,16 +34,13 @@ print(paste0("min sample size per colony is: ", minSampleSize))
 reps<-50
 print(paste0("min iteration number is: ", reps))
 
-### Step 1: read in id catalogue ###
+### Step s3_2_1: read in id catalogue ###
 
 # This is so we can loop through them later #
 
-print("Step 1: Load id catalogue")
+print("Step s3_2_1: Load id catalogue")
 input_file <- args[1]
 energyAll <- read.csv(input_file)
-#ids<-unique(energyAll$individ_id)
-#idsSub<-sample(ids, 400, replace=F)
-#energyAll<-subset(energyAll, individ_id %in% c(idsSub))
 
 ### Step 1: Estimate some important metrics ###
 
@@ -78,9 +73,7 @@ timeDark_species<-list()
 
 for (j in 1:length(ids)) {
 
-#for (j in 1:10) {
-
-print(paste0("Step 2: Prop dry bouts random, Species ", i, ", Bird ", j))
+print(paste0("Step s3_2_2: Prop dry bouts random, Species ", i, ", Bird ", j))
 
 # Subset to id j
 idSub<-ids[j]
@@ -210,9 +203,9 @@ output_file2 <- args[3]
 print("Saving output file 2")
 write.csv(timeDark, file = output_file2, row.names = FALSE) # Monthly activity data
 
-### Step 3: Check duration of fulmar dry bouts ####
+### Step s3_2_3: Check duration of fulmar dry bouts ####
 
-print("Step 3: Checking duration of fulmar dry bouts...")
+print("Step s3_2_3: Checking duration of fulmar dry bouts...")
 
 # Determine location of fulmar dry bouts #
 loxBouts<-list.files("./results/tables/supplementary/fulmarBoutLengths/", full.name=TRUE)
@@ -234,7 +227,7 @@ flightLengths<-list()
 # Create a loop to go through these #
 for (i in 1:nrow(loxBoutsDf_50)) {
 
-print(paste0("Step 3: fulmar bout, Bird ", loxBoutsDf_50$birdNo[i], " /", n_distinct(loxBoutsDf_50$birdNo), " , rep ", loxBoutsDf_50$rep[i], "/", reps))
+print(paste0("Step s3_2_3: fulmar bout, Bird ", loxBoutsDf_50$birdNo[i], " /", n_distinct(loxBoutsDf_50$birdNo), " , rep ", loxBoutsDf_50$rep[i], "/", reps))
 
 # Open bout from individual i
 loxBoutsSub<-fread(loxBoutsDf_50$fileNames[i])
@@ -266,110 +259,4 @@ xlab("Duration of flight bouts (mins)")
 
 pdf("./results/figures/supplementary/FigureS6.pdf")
 plot(FigureS6)
-dev.off()
- 
-### Step 4: Extract information for land attendance in fulmars for Paul ####
-
-print("Step 4: Extracting birds & stats for Paul...")
-
-birdIds1<-read.csv("./results/activity_Paul/Eynhallow rings.csv")
-birdIds2<-read.csv("./results/activity_Paul/Fulmar_activity_validation.csv")
-
-# Here we make a match to see which birds have video data
-MatchIds<-birdIds2 %>%
-  rename(Bird=Bird_ID) %>%
-  dplyr::left_join(birdIds1, by=c("Bird"))
-
-# Print unique IDs
-ids<-unique(MatchIds$BTO)
-
-# Find matching csv files
-allResults<-list.files("./tmp/", full.names=TRUE)
-energyRes_day<-allResults[grepl("energyDay", allResults)]
-
-# Create empty list to save results in
-timeland_all<-list()
-
-for (i in 1:length(ids)) {
-  
-print(i)  
-  
-# Grep to see if any results first
-energyRes_day_subset<-energyRes_day[grep(ids[i], energyRes_day)]
-
-if(length(energyRes_day_subset)<1) {
-  next
-}
-
-energyRes_day_subset<-read.csv(energyRes_day[grep(ids[i], energyRes_day)])
-
-# Extract Bird ID to make Paul's life easier
-MatchIds_sub<-subset(MatchIds, BTO==ids[i])
-MatchIds_sub$Date_deployed<-as.Date(MatchIds_sub$Date_deployed, format=c("%d/%m/%Y"))
-MatchIds_sub$Date_recovered<-as.Date(MatchIds_sub$Date_recovered, format=c("%d/%m/%Y"))
-
-# Summarize time on land #
-timeland<-energyRes_day_subset %>%
-  ungroup() %>%
-  dplyr::group_by(species, colony, individ_id, date) %>%
-  dplyr::summarise(tLand_mean=mean(tLand), sdLand=sd(tLand)) %>%
-  dplyr::mutate(BTO=ids[i], Bird=MatchIds_sub$Bird[1]) %>%
-  dplyr::filter(date >= min(MatchIds_sub$Date_deployed) & date <=max(MatchIds_sub$Date_recovered))
-
-# Save all results 
-timeland_all<-rbind(timeland_all, timeland)
-
-}
-
-write.csv(timeland_all, file="./results/activity_Paul/timeLand.csv")
-
-# Make a plot to see how this looks
-
-dates<-data.frame(dateKeep=seq(as.Date("2021-01-01"), as.Date("2021-12-31"), 1))
-dates$doy<-1:nrow(dates)
-dates$month<-as.numeric(substr(dates$date, 6, 7))
-dates$day<-as.numeric(substr(dates$date, 9, 10))
-
-startMonth<-dates %>%
-  dplyr::filter(day==1)
-
-Figure1A<-timeland_all %>%
-  ungroup() %>%
-  dplyr::group_by(individ_id) %>%
-  dplyr::arrange(date) %>%
-  dplyr::mutate(doy=trunc(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01")), unit=c("days"))))+1) %>%
-  ungroup() %>%
-  dplyr::group_by(species, doy) %>%
-  dplyr::mutate(birds=n_distinct(individ_id)) %>%
-  dplyr::summarise(meanLand=mean(tLand_mean), sdLand=sd(tLand_mean), birdsMean=mean(birds)) %>%
-  ggplot(aes(x=doy, y=meanLand)) +
-  geom_point() +
-  geom_line(alpha=0.2) +
-  geom_ribbon(aes(ymin=meanLand-sdLand, ymax=meanLand+sdLand), alpha=0.2) +
-  scale_x_continuous(breaks=startMonth$doy, labels=c("Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec")) +
-  xlab("") +
-  ylab("Time on land (hours)") +
-  theme_bw() +
-  ggtitle("Time spent on land, mean +/- SD") 
-  
-  Figure1B<-timeland_all %>%
-  ungroup() %>%
-  dplyr::group_by(individ_id) %>%
-  dplyr::arrange(date) %>%
-  dplyr::mutate(doy=trunc(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01")), unit=c("days"))))+1) %>%
-  ungroup() %>%
-  dplyr::group_by(species, doy) %>%
-  dplyr::mutate(birds=n_distinct(individ_id)) %>%
-  dplyr::summarise(meanLand=mean(tLand_mean), sdLand=sd(tLand_mean), birdsMean=mean(birds)) %>%
-  ggplot(aes(x=doy, y=birdsMean)) +
-  geom_line() +
-  geom_point() +   
-  scale_x_continuous(breaks=startMonth$doy, labels=c("Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec")) +
-  xlab("") +
-  ylab("Numbers of birds") +
-  theme_bw() +
-  ggtitle("Sample size")
-
-pdf("./results/activity_Paul/timeLand_plot.pdf")
-grid.arrange(Figure1A, Figure1B, nrow=2)
 dev.off()
