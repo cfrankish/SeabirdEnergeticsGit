@@ -3,7 +3,7 @@
 # Input files are the id catalogue & start/end date of the study peirod #
 # Output files are : f"./results/tables/main/table5_migratory_distance.csv" -> which is migratory distance calculated for all individuals
 # as well as species (table7_species_mean_deviance.csv) & population-level (table8_population_mean_deviance.csv) coefficient of variation in energy expenditure for Figure 3B 
-# It also outputs all supplementary figures showing weekly deviation in different behaviours & SST # (Figures S15-S20)
+# It also outputs all supplementary figures showing weekly deviation in different behaviours & SST # (Figures S16-S21)
 
 library(dplyr)
 library(fields)
@@ -27,9 +27,9 @@ library(igraph)
 
 args <- commandArgs(trailingOnly = TRUE) # This allows R to read in arguments written in the workflow file
 
-### Step 0: set-up sample size & iteration number ###
+### Step s4_2_0: set-up sample size & iteration number ###
 
-print("Step 0: setting up initial parameters")
+print("Step s4_2_0: setting up initial parameters")
 
 # Set up minimum sample size & number of iterations
 minSampleSize<-5
@@ -37,20 +37,13 @@ print(paste0("min sample size per colony is: ", minSampleSize))
 reps<-50
 print(paste0("min iteration number is: ", reps))
 
-### Step 1: read in id catalogue ###
+### Step s4_2_1: read in id catalogue ###
 
 # This is so we can loop through them later #
 
-print("Step 1: Load id catalogue")
+print("Step s4_2_1: Load id catalogue")
 input_file <- args[1]
 energyAll <- read.csv(input_file)
-
-# For testing purposes 
-#energyAll<-energyAll %>%
-#dplyr::group_by(rep, species, colony) %>%
-#dplyr::slice_sample(n=5) %>%
-#dplyr::mutate(birds=n_distinct(individ_id)) %>%
-#dplyr::filter(birds==5)
 
 # Set-up study period #
 startDate<-args[2] # Read-in start of study period
@@ -80,9 +73,9 @@ dates_weekly2<-rbind(date1, dates_weekly, date2)
 day1_month<-as.numeric(substr(day1, 6, 7))
 day2_month<-as.numeric(substr(day2, 6, 7))
 
-### Step 2: Calculate migratory distance ###
+### Step s4_2_2: Calculate migratory distance ###
 
-print("Step 2: calculate migratory distance")
+print("Step s4_2_2: calculate migratory distance")
 
 # Here we make a world raster where it is costly to cross land #
 
@@ -100,17 +93,30 @@ world_proj <- st_transform(world, crs = projection_NA)
 bbox <- st_bbox(world_proj)
 extent_proj <- extent(bbox["xmin"], bbox["xmax"], bbox["ymin"], bbox["ymax"])
 
+bbox_flat <- st_bbox(world)
+extent_flat <- extent(-180, 180, -90, 90)
+
 # Create raster template in metric CRS with 200 km resolution
 res_m <- 200000  # resolution in meters
 r <- raster(extent_proj, res = res_m, crs = projection_NA)
 
+# Create parameters for a non-projected raster
+res_m_flat<-2.5 # degrees lon/lat
+r_flat<-raster(extent_flat, res=res_m_flat, crs=projection_84)
+
 # Rasterize
 world_raster <- rasterize(world_proj, r, field = 1, background = NA)
+world_raster_flat <- rasterize(world, r_flat, field = 1, background = NA)
 
 # Change land to 1 and Sea to a very large number 
 world_raster[!is.na(world_raster)] <- 1
 world_raster[is.na(world_raster)] <- 1000000000
 rasterTrans<-world_raster
+
+# Change land to 1 and Sea to a very large number 
+world_raster_flat[!is.na(world_raster_flat)] <- 1
+world_raster_flat[is.na(world_raster_flat)] <- 1000000000
+rasterFlat<-world_raster_flat
 
 # Now we open up location of breeding colonies so we that have starting coordinates for all individuals
 colony.summary.irma<-readRDS("./data/positionsIRMA/SEATRACK_export_20241120_ringInfo.rds")
@@ -155,6 +161,9 @@ for (i in 1:length(speciesList)) {
     
     # Find csv file
     print("Opening file...")
+    birdSub_exist<-energyRes_day[grep(birdSub, energyRes_day)]
+	if(length(birdSub_exist)<1){
+	next}
     birdSub<-fread(energyRes_day[grep(birdSub, energyRes_day)])
 	
 	# Determine month and year
@@ -219,22 +228,39 @@ for (i in 1:length(speciesList)) {
     rasterCrop<-crop(rasterTrans, cropextent)
     transitionRaster <- transition(rasterCrop, mean, directions = 16) # create transition layer
     tr <- geoCorrection(transitionRaster, "c")
+	
+	# Crop map quickly to speed up calculations
+	birdLox<-as.data.frame(birdcsv_reducted)
+    colonyLox<-as.data.frame(col_locations)
+	minLon2<-ifelse(min(birdLox$mean.lon) - 25<min(colonyLox$col_lon) - 25, min(birdLox$mean.lon) - 25, min(colonyLox$col_lon) - 25)
+	minLat2<-ifelse(min(birdLox$mean.lat) - 25<min(colonyLox$col_lat) - 25, min(birdLox$mean.lat) - 25, min(colonyLox$col_lat) - 25)
+	maxLon2<-ifelse(max(birdLox$mean.lon) + 25<max(colonyLox$col_lon) + 25, max(colonyLox$col_lon) + 25, max(birdLox$mean.lon) + 25)
+	maxLat2<-ifelse(max(birdLox$mean.lat) + 50<max(colonyLox$col_lat) + 50, max(colonyLox$col_lat) + 50, max(birdLox$mean.lat) + 50)
+    cropextent2<-extent(minLon2, maxLon2, minLat2, maxLat2)
+    rasterCrop2<-crop(rasterFlat, cropextent2)
+    transitionRaster2 <- transition(rasterCrop2, mean, directions = 16) # create transition layer
+    tr2 <- geoCorrection(transitionRaster2, "c")
     
     # Calculate shortest distance to every point around land
     distance<- gdistance::shortestPath(tr, coordinates(point1Trans), coordinates(point2Trans), output ="SpatialLines")
     distancesf<-st_as_sf(distance)
     lengthKm<-data.frame(distanceKm=st_length(distancesf)/1000)
+	
+	distance2<- gdistance::shortestPath(tr2, coordinates(col_locations), coordinates(birdcsv_reducted), output ="SpatialLines")
+    distancesf2<-st_as_sf(distance2)
+	st_crs(distancesf2)<-projection_84
+    lengthKm_nonproj<-data.frame(distanceKm_flat=st_length(distancesf2)/1000)
     
 	# Save location of birds for next step
 	birdResLox<-data.frame(birdcsv_reducted) %>%
-      dplyr::bind_cols(lengthKm)
+      dplyr::bind_cols(lengthKm, lengthKm_nonproj)
 	
     # Attach results
     birdRes<-data.frame(birdcsv_reducted) %>%
-      dplyr::bind_cols(lengthKm) %>%
+      dplyr::bind_cols(lengthKm, lengthKm_nonproj) %>%
       ungroup() %>%
       dplyr::group_by(species, colony, individ_id, session_year, track_year) %>%
-      dplyr::summarise(MigratoryDistKm=max(distanceKm), startDate=min(date), endDate=max(date))
+      dplyr::summarise(MigratoryDistKm=max(distanceKm), MigratoryDistKm_nonproj=max(distanceKm_flat), startDate=min(date), endDate=max(date))
     
     # save results
     birdResAll<-rbind(birdResAll, birdRes)
@@ -247,9 +273,9 @@ for (i in 1:length(speciesList)) {
 
 write.csv(migratoryDistance, file="./results/tables/main/table5_migratory_distance_tmp.csv") # Just in case the code fails...
 
-### Step 3: Estimating weekly variation in energy expenditure  ####
+### Step s4_2_3: Estimating weekly variation in energy expenditure  ####
 
-print("Step 3: Calculating weekly energy expenditure (and deviace/cov) for all species")
+print("Step s4_2_3: Calculating weekly energy expenditure (and deviace/cov) for all species")
 
 # Open ocean polygons so I can figure out which kittiwakes go to the Pacific #
 
@@ -362,7 +388,7 @@ for (j in 1:length(speciesList)) {
    migrSubInfo<-migrSub %>%
       dplyr::ungroup() %>%
 	  dplyr::group_by(individ_id) %>%
-	  dplyr::select(session_year, individ_id, MigratoryDistKm)
+	  dplyr::select(session_year, individ_id, MigratoryDistKm, MigratoryDistKm_nonproj)
    
   # Attach to main dataset   
     birdSub_random2<-birdSub_random %>%
@@ -413,14 +439,15 @@ for (j in 1:length(speciesList)) {
     dplyr::group_by(rep, species, colony, individ_id, weekNo, track_year) %>%
     dplyr::mutate(days=n_distinct(date)) %>%
     dplyr::filter(days==7) %>% # Make sure 7 days per week
-    dplyr::summarise(weeklyDEE=sum(DEEg), MigratoryDistKm=mean(MigratoryDistKm), weeklySST=mean(sst_random), ocean=first(ocean)) %>%
+    dplyr::summarise(weeklyDEE=sum(DEEg), MigratoryDistKm=mean(MigratoryDistKm), MigratoryDistKm_nonproj=mean(MigratoryDistKm_nonproj), weeklySST=mean(sst_random), ocean=first(ocean)) %>%
     ungroup() %>%
     dplyr::group_by(individ_id) %>%
     dplyr::mutate(rep=as.numeric(as.factor(rep))) %>%
     dplyr::group_by(rep, species, colony, individ_id) %>%
     dplyr::mutate(meanWeeklyDEE=mean(weeklyDEE), meanWeeklySST=mean(weeklySST), deviationDEE=(weeklyDEE-meanWeeklyDEE)/meanWeeklyDEE, sdWeeklyDEE=sd(weeklyDEE), sdWeeklySST=sd(weeklySST)) %>%
     dplyr::group_by(species, rep, colony, individ_id) %>%
-    dplyr::summarise(WEE_cov_nb=(first(sdWeeklyDEE)/first(meanWeeklyDEE))*100, maxWeeklyDEE=max(weeklyDEE), TEE_nb=sum(weeklyDEE), MigratoryDistKm=mean(MigratoryDistKm), ocean=first(ocean)) %>%
+    dplyr::summarise(WEE_cov_nb=(first(sdWeeklyDEE)/first(meanWeeklyDEE))*100, maxWeeklyDEE=max(weeklyDEE), TEE_nb=sum(weeklyDEE), MigratoryDistKm=mean(MigratoryDistKm), 
+	MigratoryDistKm_nonproj=mean(MigratoryDistKm_nonproj), ocean=first(ocean)) %>%
     dplyr::left_join(colonySampleSize, by=c("colony")) %>%
     ungroup() %>%
     dplyr::group_by(individ_id) %>%
@@ -494,9 +521,9 @@ for (j in 1:length(speciesList)) {
   
 }
 
-### Step 4: make some final plots ####
+### Step s4_2_4: make some final plots ####
 
-print("Step 4: making some plots...") 
+print("Step s4_2_4: making some plots...") 
 
 # Now we make some plots showing weekly deviance in energy & other behaviours #
 
@@ -792,7 +819,7 @@ dev.off()
 
 # Flight #
 
-FigureS16<-deviancePopulation %>%
+FigureS17<-deviancePopulation %>%
   ggplot(aes(x=weekNo, y=devianceFlight_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceFlight_mean_sp, group=colony), alpha=0.1) +
   geom_hline(yintercept=0) +
@@ -828,13 +855,13 @@ FigureS16<-deviancePopulation %>%
   geom_segment(data=moltBLK, aes(x=Start2, xend=End2, y=0.3), linetype="dashed", color="red") +
   geom_text(data=moltBLK, aes(x=Start2 + 3, y=0.35, label="Moult"), size=2, color="red") 
 
-pdf("./results/figures/supplementary/FigureS16.pdf", width=9, height=6)
-grid.arrange(FigureS16)
+pdf("./results/figures/supplementary/FigureS17.pdf", width=9, height=6)
+grid.arrange(FigureS17)
 dev.off()
 
 # Active #
 
-FigureS17<-deviancePopulation %>%
+FigureS18<-deviancePopulation %>%
   dplyr::filter(!species %in% c("Northern fulmar", "Black-legged kittiwake")) %>%
   ggplot(aes(x=weekNo, y=devianceActive_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceActive_mean_sp, group=colony), alpha=0.1) +
@@ -867,13 +894,13 @@ FigureS17<-deviancePopulation %>%
   geom_segment(data=moltLittleAuk, aes(x=Start2, xend=End2, y=2), linetype="dashed", color="red") +
   geom_text(data=moltLittleAuk, aes(x=Start2 + 3, y=2.2, label="Moult"), size=2, color="red")  
 
-pdf("./results/figures/supplementary/FigureS17.pdf", width=9, height=6)
-grid.arrange(FigureS17)
+pdf("./results/figures/supplementary/FigureS18.pdf", width=9, height=6)
+grid.arrange(FigureS18)
 dev.off()
 
 # Rest #
 
-FigureS18<-deviancePopulation %>%
+FigureS19<-deviancePopulation %>%
   ggplot(aes(x=weekNo, y=devianceRest_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceRest_mean_sp, group=colony), alpha=0.1) +
   geom_hline(yintercept=0) +
@@ -909,13 +936,13 @@ FigureS18<-deviancePopulation %>%
   geom_text(data=moltBLK, aes(x=Start2 + 3, y=0.35, label="Moult"), size=2, color="red") +
   labs(color="", fill="")
 
-pdf("./results/figures/supplementary/FigureS18.pdf", width=9, height=6)
-grid.arrange(FigureS18)
+pdf("./results/figures/supplementary/FigureS19.pdf", width=9, height=6)
+grid.arrange(FigureS19)
 dev.off()
 
 # Land #
 
-FigureS19<-deviancePopulation %>%
+FigureS20<-deviancePopulation %>%
   ggplot(aes(x=weekNo, y=devianceLand_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceLand_mean_sp, group=colony), alpha=0.1) +
   geom_hline(yintercept=0) +
@@ -951,13 +978,13 @@ FigureS19<-deviancePopulation %>%
   geom_text(data=moltBLK, aes(x=Start2 + 3, y=1, label="Moult"), size=2, color="red") +
   labs(color="", fill="")
 
-pdf("./results/figures/supplementary/FigureS19.pdf", width=9, height=6)
-grid.arrange(FigureS19)
+pdf("./results/figures/supplementary/FigureS20.pdf", width=9, height=6)
+grid.arrange(FigureS20)
 dev.off()
 
 # Forage #
 
-FigureS20<-deviancePopulation %>%
+FigureS21<-deviancePopulation %>%
 filter(species %in% c("Northern fulmar", "Black-legged kittiwake")) %>%
   ggplot(aes(x=weekNo, y=devianceForage_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceForage_mean_sp, group=colony), alpha=0.1) +
@@ -984,8 +1011,8 @@ filter(species %in% c("Northern fulmar", "Black-legged kittiwake")) %>%
   geom_segment(data=moltBLK, aes(x=Start2, xend=End2, y=0.3), linetype="dashed", color="red") +
   geom_text(data=moltBLK, aes(x=Start2 + 3, y=0.35, label="Moult"), size=2, color="red") 
 
-pdf("./results/figures/supplementary/FigureS20.pdf", width=6, height=4)
-grid.arrange(FigureS20)
+pdf("./results/figures/supplementary/FigureS21.pdf", width=6, height=4)
+grid.arrange(FigureS21)
 dev.off()
 
 # SST #
@@ -1023,7 +1050,7 @@ dplyr::inner_join(maxVals, by=c("species"))
 moltLittleAuk2<-moltLittleAuk %>%
 dplyr::inner_join(maxVals, by=c("species"))
 
-FigureS15<-deviancePopulation %>%
+FigureS16<-deviancePopulation %>%
   ggplot(aes(x=weekNo, y=devianceSST_mean_sp)) +
   geom_line(aes(colour="Population", x=weekNo, y=devianceSST_mean_sp, group=colony), alpha=0.1) +
   geom_hline(yintercept=0) +
@@ -1059,8 +1086,8 @@ FigureS15<-deviancePopulation %>%
   geom_segment(data=moltBLK2, aes(x=Start2, xend=End2, y=heightM), linetype="dashed", color="red") +
   geom_text(data=moltBLK2, aes(x=Start2 + 3, y=heightM2, label="Moult"), size=2, color="red") 
 
-pdf("./results/figures/supplementary/FigureS15.pdf", width=9, height=6)
-grid.arrange(FigureS15)
+pdf("./results/figures/supplementary/FigureS16.pdf", width=9, height=6)
+grid.arrange(FigureS16)
 dev.off()
 
 # Save output files

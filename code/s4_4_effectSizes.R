@@ -1,4 +1,11 @@
 # This code looks into how many reps are needed to accurately estimate effect sizes #
+# It is an additional figure I added at a later point in response to a reviewer comment #
+# This file has as input files all the stats I conduct in the previous step:
+#input_files1 = f"./results/tables/main/table6_totalNBCosts.csv"
+#input_files2 = f"./results/tables/main/table7_stats_WEE_vs_TEE.csv"
+#input_files3 = f"./results/tables/main/table8_stats_WEE_vs_pred.csv"
+#input_files4 = f"./results/tables/main/table9_stats_TEE_vs_pred.csv"
+# And outputs Figure S13
 
 library(ggplot2)
 library(dplyr)
@@ -28,9 +35,9 @@ library(rstatix)
 
 args <- commandArgs(trailingOnly = TRUE) # This allows R to read in arguments written in the workflow file
 
-### Step 0: set-up sample size & iteration number ###
+### Step s4_4_0: set-up sample size & iteration number ###
 
-print("Step 0: setting up initial parameters")
+print("Step s4_4_0: setting up initial parameters")
 
 # Set up minimum sample size & number of iterations
 minSampleSize<-5
@@ -38,7 +45,7 @@ print(paste0("min sample size per colony is: ", minSampleSize))
 reps<-50
 print(paste0("min iteration number is: ", reps))
 
-### Step 1: open up all input files ###
+### Step s4_4_1: open up all input files ###
 
 # Assign arguments to input files 
 input_file1 <- args[3]
@@ -52,7 +59,7 @@ lmRes_tot<-read.csv(input_file2)# WEE_cov_nb vs TEE_nb
 lmRes_tot2<-read.csv(input_file3) # WEE_cov_nb vs other behaviors 
 lmRes_tot3<-read.csv(input_file4) # TEE_nb vs other predictors
 
-### Step 2: Calculate effect sizes for an increasing number of reps ###
+### Step s4_4_2: Calculate effect sizes for an increasing number of reps ###
 
 results_h1_h2_all<-list()
 results_h3_all<-list()
@@ -120,7 +127,7 @@ results_h4_all<-rbind(results_h4_all, results_h4)
 
 }
 
-### Step 4: plot results ###
+### Step s4_4_4: plot results ###
 
 # Factorize species in the same order #
 results_h1_h2_all<-results_h1_h2_all %>%
@@ -192,5 +199,3 @@ grid.arrange(plot1, plot3)
 plot(plot4)
 plot(plot5)
 dev.off()
-
-

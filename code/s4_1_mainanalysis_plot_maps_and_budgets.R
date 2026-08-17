@@ -28,25 +28,25 @@ library(gridExtra)
 # This line of code allows the script to read command-line arguments #
 args <- commandArgs(trailingOnly = TRUE)
 
-### Step 0: Set-up some starting parameter information ###
+### Step s4_1_0: Set-up some starting parameter information ###
 
 # Determine minimum sample size (number of birds per population) & number of iterations of energetic calculations to use # (based on s3_1)
 
 minSampleSize<-5
 reps<-50
 
-### Step 1: Load all individual Ids from result files ###
+### Step s4_1_1: Load all individual Ids from result files ###
 
 # This is so we can loop through them later #
 
-print("Step 1: Load id catalogue")
+print("Step 4_1_1: Load id catalogue")
 
 input_file <- args[1]
 energyAll <- read.csv(input_file)
 
-### Step 2: Make a map of study site ###
+### Step s4_1_2: Make a map of study site ###
 
-print("Step 2: Figure 1 - make a map of study site")
+print("Step s4_1_2: Figure 1 - make a map of study site")
 
 #### First we start by making an sst map ####
 
@@ -552,11 +552,11 @@ FigureS2<-ggplot() +
   plot(FigureS2)
   dev.off()
 
-### Step 3: Species-specific average activity & possible energy ####
+### Step S4_1_3: Species-specific average activity & possible energy ####
 
 # Here we make general plots showing temporal variation in activity budgets, SST & energy (but mainly for checking everything looks good! #
 
-print("Step 3: calculating species-specific budgets...")
+print("Step S4_1_3: calculating species-specific budgets...")
 
 # Determine where daily files are
 allResults<-list.files("./tmp/", full.names=TRUE)
@@ -626,10 +626,9 @@ for (j in 1:length(speciesList)) {
   
   for (k in 1:length(ids)) {
   
-  #for (k in 1:20) {
     
     # Print update message
-    print(paste0("Step3: Assembling... Species ", j, " Bird ", k, "/", length(ids)))  
+    print(paste0("Step 4_1_3: Assembling... Species ", j, " Bird ", k, "/", length(ids)))  
     
     # Open id k
     birdSub<-ids[k]
@@ -747,9 +746,9 @@ average_activity_all<-average_activity %>%
                    SST=mean(meansst), sdSST=sd(meansst), seSST=sdSST/sqrt(reps), SST_max=max(maxsst), SST_min=min(minsst),
                    energy=mean(meanDEE), sdenergy=sd(meanDEE), seenergy=sdenergy/sqrt(reps))
 
-### Step 4: the same as above but for colonies ####
+### Step s4_1_4: the same as above but for colonies ####
 
-print("Step 4: estimating population-specific parameters...")
+print("Step s4_1_4: estimating population-specific parameters...")
 
 # Run from 1st of September through to end of April # 
 

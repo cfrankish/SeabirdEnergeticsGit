@@ -1,12 +1,12 @@
 # This script conducts the main statistics in my manuscript #
 # Input files are start & end of the study period #
 # There are many output files:
-# Determine intput and output files
 #output_files1 = f"./results/tables/main/table6_totalNBCosts.csv"
 #output_files2 = f"./results/tables/main/table7_stats_WEE_vs_TEE.csv"
 #output_files3 = f"./results/tables/main/table8_stats_WEE_vs_pred.csv"
 #output_files4 = f"./results/tables/main/table9_stats_TEE_vs_pred.csv"
 
+library(ggplot2)
 library(ggplot2)
 library(dplyr)
 library(fields)
@@ -35,14 +35,14 @@ library(rstatix)
 
 args <- commandArgs(trailingOnly = TRUE) # This allows R to read in arguments written in the workflow file
 
-### Step 00: define start & end of study period ###
+### Step s4_3_0_0: define start & end of study period ###
 
 startDate<-args[1] # Read-in start of study period
 endDate<-args[2] # Read-in end date of study period
 
-### Step 0: set-up sample size & iteration number ###
+### Step s4_3_0: set-up sample size & iteration number ###
 
-print("Step 0: setting up initial parameters")
+print("Step s4_3_0: setting up initial parameters")
 
 # Set up minimum sample size & number of iterations
 minSampleSize<-5
@@ -50,9 +50,9 @@ print(paste0("min sample size per colony is: ", minSampleSize))
 reps<-50
 print(paste0("min iteration number is: ", reps))
 
-### Step 1: Estimate total non-breeding costs ###
+### Step s4_3_1: Conduct all statistics ###
 
-print("Step 1: Estimate total NB costs ..:")
+print("Step s4_3_1: Conduct all statistics ..:")
 
 ## First we make a dataset listing the study period dates so we can subset our individual energy expenditure datasets ##
 
@@ -100,7 +100,7 @@ species<-data.frame(species=c("Northern fulmar", "Black-legged kittiwake", "Comm
 species$allometryCoef<-c(0.765, 0.717, 0.689, 0.689, 0.689, 0.689)
 species$LCT<-c(9, 12.5, 14.18, 14.18, 14.18, 14.18)
 
-# Define location of other information (sst?)
+# Define location of other information
 deviation_weekly<-allResults_deviation[grepl("/weeklydeviance_", allResults_deviation)]
 
 # Set options for dredging
@@ -133,8 +133,7 @@ for (i in 1:reps) {
   
   for (j in 1:length(speciesList)) {
     
-    #print(paste0("Calculating amplitude for rep ", i, " species ", j ))
-    print(paste0("Rep ", i, " Species ", j, ": Estimating NB costs...")) 
+    print(paste0("Rep ", i, " Species ", j, ": Conducting stats...")) 
     
     # Subset to species j
 	speciesSub<-speciesList[j]
@@ -166,7 +165,7 @@ for (i in 1:reps) {
       dplyr::left_join(species, by=c("species")) %>%
 	  dplyr::left_join(devianceMean, by=c("rep", "species", "colony", "individ_id")) %>%
       ungroup() %>%
-      dplyr::mutate(TEE_nb_scale=scale(TEE_nb), sst_scale=scale(SST), Migr_scale=scale(MigratoryDistKm), WEE_cov_nb_scale=scale(WEE_cov_nb), 
+      dplyr::mutate(TEE_nb_scale=scale(TEE_nb), sst_scale=scale(SST), Migr_scale=scale(MigratoryDistKm), Migr_scale2=scale(MigratoryDistKm_nonproj), WEE_cov_nb_scale=scale(WEE_cov_nb), 
 	  sst_start_scale=scale(SST_col), sst_gain_scale=scale(SSTdiff))  
 	  
     # Remove colonies with small sample sizes
@@ -294,6 +293,21 @@ for (i in 1:reps) {
     sum1_2$species<-speciesNB_stats6$species[1]
     sum1_2$test<-"WEE_cov_nb_vs_predictors"
 	sum1_2$type<-"Un-weighted"
+	
+	# Un-weighted with flat projection for migration #
+    lm2_2_2<-lmer(WEE_cov_nb_scale ~ Migr_scale2*sst_gain_scale + sst_start_scale +  (1 |colony), data=speciesNB_stats6)
+	
+	# Extract coefficients
+    lm2_2_2sum<-summary(lm2_2_2)
+    lm2_2_2sum_df<-data.frame(coefficients(lm2_2_2sum))
+	sum1_2_2<-lm2_2_2sum_df
+	sum1_2_2$predictors<-row.names(sum1_2_2)
+    r2_values <- r.squaredGLMM(lm2_2_2)
+    sum1_2_2$r2<-r2_values[1]
+    sum1_2_2$rep<-speciesNB_stats6$rep[1]
+    sum1_2_2$species<-speciesNB_stats6$species[1]
+    sum1_2_2$test<-"WEE_cov_nb_vs_predictors"
+	sum1_2_2$type<-"Un-weighted_notprojected"
     
     # TEE_nb vs- environmental variables #
 	
@@ -326,11 +340,26 @@ for (i in 1:reps) {
     sum3_2$species<-speciesNB_stats6$species[1]
     sum3_2$test<-"TEE_nb_vs_predictors"
 	sum3_2$type<-"Un-weighted"
+	
+	# Un-weighted - not projected #
+    lm3_2_2<-lmer(TEE_nb_scale ~ Migr_scale2*sst_gain_scale + sst_start_scale +  (1 |colony), data=speciesNB_stats6)
+	
+	# Extract coefficients
+	lm3_2_2sum<-summary(lm3_2_2)
+    lm3_2_2sum_df<-data.frame(coefficients(lm3_2_2sum))
+	sum3_2_2<-lm3_2_2sum_df
+	sum3_2_2$predictors<-row.names(sum3_2_2)
+    r2_values <- r.squaredGLMM(lm3_2_2)
+    sum3_2_2$r2<-r2_values[1]
+    sum3_2_2$rep<-speciesNB_stats6$rep[1]
+    sum3_2_2$species<-speciesNB_stats6$species[1]
+    sum3_2_2$test<-"TEE_nb_vs_predictors"
+	sum3_2_2$type<-"Un-weighted_notprojected"
     
     # Collate results
     lmRes<-rbind(pred1, pred1_2) # TEE_nb vs WEE_cov_nb
-	lmRes2<-rbind(sum1, sum1_2) # WEE_cov_nb vs other predictions
-	lmRes3<-rbind(sum3, sum3_2) # TEE_nb vs other predictors
+	lmRes2<-rbind(sum1, sum1_2, sum1_2_2) # WEE_cov_nb vs other predictions
+	lmRes3<-rbind(sum3, sum3_2, sum3_2_2) # TEE_nb vs other predictors
 	
     # Save results of models
     lmRes_reps<-rbind(lmRes_reps, lmRes) # TEE_nb vs WEE_cov_nb
@@ -522,17 +551,17 @@ lmRes_sum<-lmRes_tot %>%
 totalCosts_sum<-totalCosts %>%
 dplyr::ungroup() %>%
 dplyr::group_by(species, individ_id) %>%
-dplyr::summarise(TEE_nb_mean=mean(TEE_nb), TEE_nb_sd=sd(TEE_nb), WEE_cov_nb_mean=mean(WEE_cov_nb), WEE_cov_nb_sd=sd(WEE_cov_nb)) %>%
+dplyr::summarise(TEE_nb_mean=mean(TEE_nb), TEE_nb_sd=sd(TEE_nb), WEE_cov_nb_mean=mean(WEE_cov_nb), WEE_cov_nb_sd=sd(WEE_cov_nb), max_wee_mean=mean(maxWeeklyDEE), max_wee_sd=sd(maxWeeklyDEE)) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
 
 totalCosts_colony_sum<-totalCosts %>%
 dplyr::ungroup() %>%
 dplyr::group_by(species, colony, individ_id) %>%
-dplyr::summarise(TEE_nb_mean=mean(TEE_nb), WEE_cov_nb_mean=mean(WEE_cov_nb)) %>%
+dplyr::summarise(TEE_nb_mean=mean(TEE_nb), WEE_cov_nb_mean=mean(WEE_cov_nb), max_wee_mean=mean(maxWeeklyDEE)) %>%
 ungroup() %>%
 dplyr::group_by(species, colony) %>%
-dplyr::summarise(TEE_nb_mean2=mean(TEE_nb_mean), sd1=sd(TEE_nb_mean), WEE_cov_nb_mean2=mean(WEE_cov_nb_mean), sd2=sd(WEE_cov_nb_mean)) %>%
+dplyr::summarise(TEE_nb_mean2=mean(TEE_nb_mean), sd1=sd(TEE_nb_mean), WEE_cov_nb_mean2=mean(WEE_cov_nb_mean), sd2=sd(WEE_cov_nb_mean), max_wee_mean2=mean(max_wee_mean), sd3=sd(max_wee_mean)) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
 
@@ -708,6 +737,46 @@ labs(tag="A)", alpha="Sig")
 
 pdf("./results/figures/main/Figure3A_unweighted.pdf", width=5, height=7.5)
 grid.arrange(Figure3A_unweighted)
+dev.off()
+
+# un-weighted version
+
+Figure3A_unweighted_nonproj<-lmRes_tot2 %>%
+dplyr::bind_rows(lmRes_tot3) %>%
+dplyr::filter(!predictors %in% c("(Intercept)")) %>%
+ungroup() %>%
+dplyr::mutate(upper=Estimate + 1.96*Std..Error, lower=Estimate - 1.96*Std..Error) %>%
+dplyr::group_by(species, type, test, predictors) %>%
+dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), within_model_var=mean(Std..Error^2), between_model_var=var(Estimate), totalVar=within_model_var + (1+1/repsTot)*between_model_var,
+se_pooled=sqrt(totalVar), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper),
+CI_low=mean.fit-1.96*se_pooled, CI_high=mean.fit+1.96*se_pooled, r2low=mean.r2-1.96*se.r2, r2high=mean.r2+1.96*se.r2) %>% 
+dplyr::mutate(sig=ifelse(mean.fit-1.96*se_pooled< 0 & mean.fit + 1.96*se_pooled > 0, 0, 1)) %>%
+dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
+                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
+dplyr::mutate(test=ifelse(test=="WEE_cov_nb_vs_predictors", "WEE_COV_NB", "TEE_NB")) %>%
+dplyr::mutate(predictors=ifelse(predictors=="Migr_scale", "MigratoryDist", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="sst_gain_scale", "SST_Gain", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="sst_start_scale", "SST_Start", predictors)) %>%
+dplyr::mutate(predictors=ifelse(predictors=="Migr_scale:sst_gain_scale", "MigratoryDist:SST_Gain", predictors)) %>%
+dplyr::mutate(predictor=factor(predictors, levels=c("MigratoryDist", "SST_Start", "SST_Gain", "MigratoryDist:SST_Gain"))) %>%
+dplyr::mutate(test=factor(test, levels=c("WEE_COV_NB", "TEE_NB"))) %>%
+dplyr::filter(type=="Un-weighted_notprojected") %>%
+ggplot(aes(x=mean.fit, y=predictors)) +
+geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*se_pooled, xmax=mean.fit + 1.96*se_pooled, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
+#geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
+scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+ 
+theme_bw() +
+theme(legend.position="bottom", axis.title.y = element_text(size = 16)) +
+scale_shape_manual(values=c(1, 16)) +
+geom_vline(xintercept=0, linetype="dashed") +
+ylab("Predictor variables") +
+xlab("Estimate +/- 95% confidence intervals") +
+facet_wrap(~test, nrow=2) +
+guides(color="none") +
+labs(tag="A)", alpha="Sig")
+
+pdf("./results/figures/main/Figure3A_unweighted2.pdf", width=5, height=7.5)
+grid.arrange(Figure3A_unweighted_nonproj)
 dev.off()
 
 #### Preparing data for supplementary plot making ####
@@ -1673,7 +1742,81 @@ FigureS30<-ggplot() +
 pdf("./results/figures/supplementary/FigureS30.pdf", width=6.5, height=5)
 plot(FigureS30)
 dev.off()
-  
+
+#### Finally here we make some additional plots just showing the shape of individual energy expenditure strategies ####
+
+# make a species list to loop through #
+
+DistributionData2_individual<-totalCosts %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(meanSST=mean(SST),
+meanMigr=mean(MigratoryDistKm), TEE_nb_mean=mean(TEE_nb),
+WEE_cov_nb_mean=mean(WEE_cov_nb)) %>%
+ungroup() %>%
+dplyr::group_by(species) %>%
+arrange(desc(WEE_cov_nb_mean)) %>%
+dplyr::slice(c(1:10)) %>%
+dplyr::mutate(rank=row_number()) %>%
+dplyr::select(species, colony, individ_id, WEE_cov_nb_mean, TEE_nb_mean, rank)
+
+DistributionData2_individual2<-totalCosts %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id) %>%
+dplyr::summarise(meanSST=mean(SST),
+meanMigr=mean(MigratoryDistKm), TEE_nb_mean=mean(TEE_nb),
+WEE_cov_nb_mean=mean(WEE_cov_nb)) %>%
+ungroup() %>%
+dplyr::group_by(species) %>%
+arrange(WEE_cov_nb_mean) %>%
+dplyr::slice(c(1:10)) %>%
+dplyr::mutate(rank=row_number()) %>%
+dplyr::select(species, colony, individ_id, WEE_cov_nb_mean, TEE_nb_mean, rank)
+
+speciesList<-unique(DistributionData2$species) 
+
+for (i in 1:length(speciesList)) {
+
+print(i)
+
+speciesSub<-speciesList[i]
+devianceWeekly<-readRDS(deviation_weekly[grepl(speciesSub, deviation_weekly)])
+
+devianceWeekly_topfive<-devianceWeekly %>%
+dplyr::inner_join(DistributionData2_individual, by=c("species", "colony", "individ_id")) %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id, weekNo, rank) %>%
+dplyr::summarise(meanWEE=mean(weeklyDEE), sdWEE=sd(weeklyDEE), seWEE=sdWEE/sqrt(reps), WEE_cov_nb_mean=mean(WEE_cov_nb_mean, na.rm=TRUE), TEE_nb_mean=mean(TEE_nb_mean, na.rm=TRUE)) %>%
+dplyr::mutate(group="Top_ten")
+
+devianceWeekly_lowfive<-devianceWeekly %>%
+dplyr::inner_join(DistributionData2_individual2, by=c("species", "colony", "individ_id")) %>%
+ungroup() %>%
+dplyr::group_by(species, colony, individ_id, weekNo, rank) %>%
+dplyr::summarise(meanWEE=mean(weeklyDEE), sdWEE=sd(weeklyDEE), seWEE=sdWEE/sqrt(reps), WEE_cov_nb_mean=mean(WEE_cov_nb_mean, na.rm=TRUE), TEE_nb_mean=mean(TEE_nb_mean, na.rm=TRUE)) %>%
+dplyr::mutate(group="Bottom_ten")
+
+ind_patterns<-devianceWeekly_topfive %>%
+bind_rows(devianceWeekly_lowfive) %>%
+ggplot(aes(x=weekNo, y=meanWEE)) +
+geom_line(aes(group=individ_id, color=TEE_nb_mean, linetype=group)) +
+geom_ribbon(aes(group=individ_id, ymin=meanWEE - 1.96*seWEE, ymax=meanWEE + 1.96*seWEE, fill=TEE_nb_mean, alpha=group)) +
+scale_alpha_manual(values=c(0.2, 0.5)) + 
+ylab(expression("WEE"[]*" (kJ.g"^-1*")")) +
+theme_bw() +
+theme(legend.position="bottom") + 
+xlab("Week #") +
+scale_fill_viridis_c() + 
+scale_color_viridis_c() + 
+facet_wrap(~rank, nrow=2) +
+labs(fill=expression("TEE"[NB]*" (kJ.g"^-1*")"), linetype="", color=expression("TEE"[NB]*" (kJ.g"^-1*")"), alpha="")
+ 
+pdf(paste0("./results/figures/supplementary/ind_pattern_", speciesSub, ".pdf"), width=10, height=6)
+plot(ind_patterns)
+dev.off()
+
+}
+ 
 # Save output files
 print("Saving output files...")
 
