@@ -1,6 +1,6 @@
 # Code
 
-## Scripts needed to run workflow for paper 1 (in review)
+## Scripts needed to run workflow for paper in review:
 
 'North Atlantic seabirds exhibit strong variability in seasonal energy expenditure with implications for energetic bottlenecks and total non-breeding costs' (Frankish et al.)
 
@@ -12,11 +12,11 @@
 ### Step 2 calculates daily activity budgets and energy expenditure:
 - `S2_1_calculatebudgets.R`: calculates the above for every individual bird x 100. Input file is 'birddata_raw/speciesname/id.csv', and output file is 'tmp/id_energyDay.csv'.
 - `S2_2_sensitivity_analysis_part1.R`: conducts sensitivity analysis whereby activity & energy is calculated for every individual where each parameter used in our energetic approach is modified in turn according to a few values. Input file is 'birddata_raw/speciesname/id.csv', and output file is 'tmp2/id_energyDay.csv'.
-- `S2_3_sensitivity_analysis_part2.R`: gathers individual files, and summarizes the effect of changing each parameter on weekly variation and total energy expenditure for the six species.
+- `S2_3_sensitivity_analysis_part2.R`: gathers individual files, and summarizes the effect of changing each parameter on weekly variation and total energy expenditure for the six species. Outputs Figures S9-S10. 
 
 ### Step 3 runs some supplementary analyses:
-- `S3_1_supanalysis_min_iteration_number.R`: Conducts an analysis where it calculates total non-breeding season energy expenditure for an increasing number of iterarions so I can decide what a good number is for further analysis. It outputs Figure S11. 
-- `S3_2_supanalysis_check_bout_lengths.R`: Does some checks to validate my approach for dry bout allocation. Specificially, it looks into how many dry bouts are allocated to flight vs. land at random, calculates the duration of flight bouts during darkness, and creates a distirbution plot of fulmar flight bout lengths. It outputs Figures S5-7.
+- `S3_1_supanalysis_min_iteration_number.R`: Conducts an analysis where it calculates total non-breeding season energy expenditure for an increasing number of iterarions so I can decide what a good number is for further analysis. It outputs Figure S11 and S12. 
+- `S3_2_supanalysis_check_bout_lengths.R`: Does some checks to validate my approach for dry bout allocation. Specifically, it looks into how many dry bouts are allocated to flight vs. land at random, calculates the duration of flight bouts during darkness, and creates a distribution plot of fulmar flight bout lengths. It outputs Figures S5-7.
 
 ### Step 4 mainly conducts the main analysis:
 - `S4_1_mainanalysis_plot_maps_budgets.R`: This script maps the distribution of the study populations and their non-breeding season distributions (Figures 1, S1 & S2). It also estimates yearly activity budgets, SST & energy expenditure at a species and population-level for visual exploration.
