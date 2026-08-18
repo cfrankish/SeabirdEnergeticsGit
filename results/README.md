@@ -1,3 +1,3 @@
 # Results of analyses
 
-Will contain key plots from publications
+This folder should contain three sub-folders: 'tables', 'figures' and 'tempPlots'
