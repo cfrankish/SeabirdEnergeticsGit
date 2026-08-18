@@ -9,3 +9,5 @@
 - `table7_stats_WEE_vs_TEE.csv`: Table with results of stats investigating relationship between WEE_cov_nb and TEE_nb
 - `table8_stats_WEE_vs_pred.csv`: Table with results of stats investigating effects of various predictors on WEE_cov_nb
 - `table9_stats_TEE_vs_pred.csv`: Table with results of stats investigating effects of various predictors on TEE_nb
+- `deviance_speciesname.rds`: Tables containing analysis parameters for every individual/week (e.g., WEE_cov_nb etc)
+- `weeklydeviance_speciesname.rds`: Tables containing weekly information on deviance in energy expenditure, activity budgets, SST etc. 
