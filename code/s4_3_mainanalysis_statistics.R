@@ -1106,7 +1106,7 @@ grid.arrange(FigureS14a)
 dev.off()
 
 pdf("./results/figures/supplementary/FigureS14b.pdf", height=10)
-grid.arrange(FigureS14a)
+grid.arrange(FigureS14b)
 dev.off()
 
 ### Figures S21, 23, 25, 27, 31 & 33: Plotting examples of how different pops behave (high & low deviance) ###
