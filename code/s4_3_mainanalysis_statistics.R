@@ -609,26 +609,6 @@ dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northe
 
 # plot these
 
-Figure2C<-ggplot() +
-geom_point(data=totalCosts_sum, aes(x=WEE_cov_nb_mean, y=TEE_nb_mean, color=species), alpha=0.03) +
-geom_line(data=subset(lmRes_short, type=="Weighted"), aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
-geom_ribbon(data=subset(lmRes_short, type=="Weighted"), aes(x=predictor_val, y=meanEstimate, ymin=meanEstimate-meanSE*1.96, ymax=meanEstimate + meanSE*1.96, group=species, fill=species), alpha=0.2) +
-scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
-scale_fill_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822")) +
-theme_bw() +
-xlab(expression("WEE"[COV_NB]*"")) +
-ylab(expression("TEE"[NB]*" (kJ.g"^-1*")")) +
-theme_bw() +
-ggtitle("C)") + 
-theme(legend.position = "none",
-panel.grid = element_blank(),
-axis.text=element_text(size=12),
-		axis.title=element_text(size=12)) 
-  
-pdf("./results/figures/main/Figure2C_weighted.pdf", width=6, height=5)
-plot(Figure2C)
-dev.off()
-
 Figure2C_unweighted<-ggplot() +
 geom_point(data=totalCosts_sum, aes(x=WEE_cov_nb_mean, y=TEE_nb_mean, color=species), alpha=0.06) +
 geom_line(data=subset(lmRes_short, type=="Un_weighted"), aes(y=meanEstimate, x=predictor_val, color=species, group=interaction(species, predictor))) +
@@ -645,7 +625,7 @@ panel.grid = element_blank(),
 axis.text=element_text(size=12),
 		axis.title=element_text(size=12)) 
   
-pdf("./results/figures/main/Figure2C_unweighted.pdf", width=6, height=5)
+pdf("./results/figures/main/Figure2C.pdf", width=6, height=5)
 plot(Figure2C_unweighted)
 dev.off()
 
@@ -661,43 +641,6 @@ lmRes_sum<-lmRes_tot %>%
   dplyr::mutate(low=meanCoef-1.96*se_pooled, high=meanCoef + 1.96*se_pooled, sig=ifelse(meanCoef - 1.96*se_pooled <0 & meanCoef + 1.96*se_pooled>0, 0, 1)) %>%
   dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
-
-Figure3A_weighted<-lmRes_tot2 %>%
-dplyr::bind_rows(lmRes_tot3) %>%
-dplyr::filter(!predictors %in% c("(Intercept)")) %>%
-ungroup() %>%
-dplyr::mutate(upper=Estimate + 1.96*Std..Error, lower=Estimate - 1.96*Std..Error) %>%
-dplyr::group_by(species, type, test, predictors) %>%
-dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), within_model_var=mean(Std..Error^2), between_model_var=var(Estimate), totalVar=within_model_var + (1+1/reps)*between_model_var,
-se_pooled=sqrt(totalVar), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper)) %>% 
-dplyr::mutate(sig=ifelse(mean.fit-1.96*se_pooled< 0 & mean.fit + 1.96*se_pooled > 0, 0, 1)) %>%
-dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
-                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
-dplyr::mutate(test=ifelse(test=="WEE_cov_nb_vs_predictors", "WEE_COV_NB", "TEE_NB")) %>%
-dplyr::mutate(predictors=ifelse(predictors=="Migr_scale", "MigratoryDist", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="sst_gain_scale", "SST_Gain", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="sst_start_scale", "SST_Start", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="Migr_scale:sst_gain_scale", "MigratoryDist:SST_Gain", predictors)) %>%
-dplyr::mutate(predictor=factor(predictors, levels=c("MigratoryDist", "SST_Start", "SST_Gain", "MigratoryDist:SST_Gain"))) %>%
-dplyr::mutate(test=factor(test, levels=c("WEE_COV_NB", "TEE_NB"))) %>%
-dplyr::filter(type=="Weighted") %>%
-ggplot(aes(x=mean.fit, y=predictors)) +
-geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*se_pooled, xmax=mean.fit + 1.96*se_pooled, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
-#geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
-scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+ 
-theme_bw() +
-theme(legend.position="bottom", axis.title.y = element_text(size = 16)) +
-scale_shape_manual(values=c(1, 16)) +
-geom_vline(xintercept=0, linetype="dashed") +
-ylab("Predictor variables") +
-xlab("Estimate +/- 95% confidence intervals") +
-facet_wrap(~test, nrow=2) +
-guides(color="none") +
-labs(tag="A)", alpha="Sig")
-
-pdf("./results/figures/main/Figure3A_weighted.pdf", width=5, height=7.5)
-grid.arrange(Figure3A_weighted)
-dev.off()
 
 # un-weighted version
 
@@ -735,48 +678,8 @@ facet_wrap(~test, nrow=2) +
 guides(color="none") +
 labs(tag="A)", alpha="Sig")
 
-pdf("./results/figures/main/Figure3A_unweighted.pdf", width=5, height=7.5)
+pdf("./results/figures/main/Figure3A.pdf", width=5, height=7.5)
 grid.arrange(Figure3A_unweighted)
-dev.off()
-
-# un-weighted version
-
-Figure3A_unweighted_nonproj<-lmRes_tot2 %>%
-dplyr::bind_rows(lmRes_tot3) %>%
-dplyr::filter(!predictors %in% c("(Intercept)")) %>%
-ungroup() %>%
-dplyr::mutate(upper=Estimate + 1.96*Std..Error, lower=Estimate - 1.96*Std..Error) %>%
-dplyr::group_by(species, type, test, predictors) %>%
-dplyr::summarise(repsTot=n_distinct(rep), mean.fit=mean(Estimate), sd.fit=sd(Estimate), se.fit=sd.fit/sqrt(reps), within_model_var=mean(Std..Error^2), between_model_var=var(Estimate), totalVar=within_model_var + (1+1/repsTot)*between_model_var,
-se_pooled=sqrt(totalVar), mean.se=mean(Std..Error), max.se=max(Std..Error), min.se=min(Std..Error), meanCI=1.96*mean.se, mean.r2=mean(r2), sd.r2=sd(r2), se.r2=1.96*sd.r2/sqrt(reps), mean.p=mean(Pr...t..), sdp=sd(Pr...t..), sep=sdp/sqrt(reps), minlower=min(lower), maxupper=max(upper), meanlower=mean(lower), meanupper=mean(upper),
-CI_low=mean.fit-1.96*se_pooled, CI_high=mean.fit+1.96*se_pooled, r2low=mean.r2-1.96*se.r2, r2high=mean.r2+1.96*se.r2) %>% 
-dplyr::mutate(sig=ifelse(mean.fit-1.96*se_pooled< 0 & mean.fit + 1.96*se_pooled > 0, 0, 1)) %>%
-dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
-                                                 "Little auk", "Common guillemot", "Brünnich's guillemot"))) %>%
-dplyr::mutate(test=ifelse(test=="WEE_cov_nb_vs_predictors", "WEE_COV_NB", "TEE_NB")) %>%
-dplyr::mutate(predictors=ifelse(predictors=="Migr_scale", "MigratoryDist", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="sst_gain_scale", "SST_Gain", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="sst_start_scale", "SST_Start", predictors)) %>%
-dplyr::mutate(predictors=ifelse(predictors=="Migr_scale:sst_gain_scale", "MigratoryDist:SST_Gain", predictors)) %>%
-dplyr::mutate(predictor=factor(predictors, levels=c("MigratoryDist", "SST_Start", "SST_Gain", "MigratoryDist:SST_Gain"))) %>%
-dplyr::mutate(test=factor(test, levels=c("WEE_COV_NB", "TEE_NB"))) %>%
-dplyr::filter(type=="Un-weighted_notprojected") %>%
-ggplot(aes(x=mean.fit, y=predictors)) +
-geom_pointrange(aes(y=predictors, xmin=mean.fit - 1.96*se_pooled, xmax=mean.fit + 1.96*se_pooled, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge(width=0.9)) +
-#geom_segment(aes(x=minlower, y=predictors, xend=maxupper, group=interaction(species, test), color=species, alpha=factor(sig)), position=position_dodge2(width=0.9), linetype="dotted") +
-scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+ 
-theme_bw() +
-theme(legend.position="bottom", axis.title.y = element_text(size = 16)) +
-scale_shape_manual(values=c(1, 16)) +
-geom_vline(xintercept=0, linetype="dashed") +
-ylab("Predictor variables") +
-xlab("Estimate +/- 95% confidence intervals") +
-facet_wrap(~test, nrow=2) +
-guides(color="none") +
-labs(tag="A)", alpha="Sig")
-
-pdf("./results/figures/main/Figure3A_unweighted2.pdf", width=5, height=7.5)
-grid.arrange(Figure3A_unweighted_nonproj)
 dev.off()
 
 #### Preparing data for supplementary plot making ####
@@ -886,7 +789,7 @@ pdf("./results/figures/supplementary/FigureS8.pdf", width=15, height=9)
 plot(FiguresS8)
 dev.off()
 
-FigureS12<-ggplot() +
+FigureS14<-ggplot() +
  geom_pointrange(data=colonyRes_lox, aes(y=WEE_cov_nb_pop_mean, x=colonyName, ymin=WEE_cov_nb_pop_mean - 1.96*WEE_cov_nb_pop_se, ymax=WEE_cov_nb_pop_mean + 1.96*WEE_cov_nb_pop_se, color=species)) +
  facet_wrap(~species, scales="free_y", nrow=3) +
  scale_color_manual(values=c("#875692", "#BE0032", "#008856", "#C3A600", "#0072b2", "#E25822"))+
@@ -897,8 +800,8 @@ FigureS12<-ggplot() +
   theme(legend.position = "none")  +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-pdf("./results/figures/supplementary/FigureS12.pdf", width=15, height=9)
-plot(FigureS12)
+pdf("./results/figures/supplementary/FigureS14.pdf", width=15, height=9)
+plot(FigureS14)
 dev.off()
  
 ### Figures S22, 24, 26, 28, 32, 34: Plot spatial distribution of energy strategies  ###
@@ -1079,7 +982,7 @@ dplyr::mutate(Metric=c("SST_DIFF"), value=meanSST_diff)
 alldist<-rbind(dist1, dist2, dist3, dist4) %>%
 dplyr::mutate(species=factor(species, levels=c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin",
                                                  "Little auk", "Common guillemot", "Brünnich's guillemot"))) 
-FigureS14a<-alldist %>%
+FigureS15a<-alldist %>%
 dplyr::mutate(Metric=factor(Metric, levels=c("SST_COL", "SST_NB", "SST_DIFF", "MIGRATORY_DIST"))) %>%
 dplyr::filter(Metric %in% c("SST_NB", "SST_COL")) %>%
 ggplot() +
@@ -1090,7 +993,7 @@ theme(legend.position="bottom") +
 facet_wrap(~Metric, nrow=2) +
 xlab("")
 
-FigureS14b<-alldist %>%
+FigureS15b<-alldist %>%
 dplyr::mutate(Metric=factor(Metric, levels=c("SST_COL", "SST_NB", "SST_DIFF", "MIGRATORY_DIST"))) %>%
 dplyr::filter(Metric %in% c("SST_DIFF", "MIGRATORY_DIST")) %>%
 ggplot() +
@@ -1101,12 +1004,12 @@ theme(legend.position="bottom") +
 facet_wrap(~Metric, nrow=2, scales="free") +
 xlab("")
 
-pdf("./results/figures/supplementary/FigureS14a.pdf", height=10)
-grid.arrange(FigureS14a)
+pdf("./results/figures/supplementary/FigureS15a.pdf", height=10)
+grid.arrange(FigureS15a)
 dev.off()
 
-pdf("./results/figures/supplementary/FigureS14b.pdf", height=10)
-grid.arrange(FigureS14b)
+pdf("./results/figures/supplementary/FigureS15b.pdf", height=10)
+grid.arrange(FigureS15b)
 dev.off()
 
 ### Figures S21, 23, 25, 27, 31 & 33: Plotting examples of how different pops behave (high & low deviance) ###
