@@ -23,6 +23,8 @@ data/wetdry_raw/*
 !data/wetdry_raw/README.md
 data/positionsIRMA/*
 !data/positionsIRMA/README.md
+data/birddata_ind/*
+!data/birddata_ind/README.md
 ## ignore any junk created in code folder
 code/*.rds
 code/*.Rdata
