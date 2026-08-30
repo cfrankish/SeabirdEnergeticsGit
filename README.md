@@ -4,7 +4,7 @@ This repository contains a workflow which can be used to calculate non-breeding 
 
 ## 📄Simple Schematic of workflow📄
 
-<img width="2353" height="1340" alt="image" src="https://github.com/user-attachments/assets/267f6d6c-9d27-44cf-bfbe-45fe08e16538" />
+<img width="1771" height="1015" alt="image" src="https://github.com/user-attachments/assets/8c26051f-f22e-4a48-82db-e1191df3b4ce" />
 
 ## Pre-requisites 
 
@@ -105,7 +105,7 @@ conda activate /cluster/projects/nn******/PROJECTNAME/cbird
 where nn****** is the project number and PROJECTNAME is your project name. 
 
  ### Run through steps in worflow
-The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one (sequentially). Each step specifies expected input and output files, the R script which is called (contained in `scripts` folder), and requested walltime and memory usage. 
+The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one (sequentially). Each step specifies expected input and output files, the R script which is called (contained in `scripts` folder), and requested walltime and memory usage. Memory usage is currently set to a high value which can be expensive. Consider lowering memory usage, and upping it only for targets which get an OOM message (out of memory). All targets from a given step should be completed before moving to the next step. 
 
 Targets to be run can be matched with wildcards. For example, to query the status of the first target to be run on the cluster, enter the following code:
 
@@ -139,7 +139,7 @@ To query the status of your job on SAGA, enter the following code:
 
 ```
 squeue -l -u ACOUNTNAME
-```
+``` 
 
 ## Key Contributors
 - [Caitlin Frankish](https://github.com/cfrankish): Lead developer and maintainer
