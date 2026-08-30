@@ -33,7 +33,7 @@ This repository contains a workflow which can be used to calculate non-breeding 
 
 ```text
 project/
-├── code/
+├── scripts/
 ├── data/
 │   ├── wetdry_database/
 │   ├── positionsIRMA/
@@ -44,7 +44,7 @@ project/
 
 where:
 
-- `code/` – scripts (in this case `s1_1_merge_tracking_data_local.R` and `s1_2_download_env_data_local.R`)
+- `scripts/` – scripts (in this case `s1_1_merge_tracking_data_local.R` and `s1_2_download_env_data_local.R`)
 - `data/` – input datasets used by the project.
   - `wetdry_database/` – activity data by species with following format `wetdry_database_Black-legged kittiwake_2026-08-06.rds`
   - `wetdry_raw/` 
@@ -62,10 +62,15 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 
 ### Clone repository to SAGA ###
 
-`git clone https://github.com/cfrankish/SeabirdEnergeticsGit.git`
+```
+git clone https://github.com/cfrankish/SeabirdEnergeticsGit.git
+```
 
 ### Alternatively, make all directories on cluster
-<pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ data/birddata_ind/ scripts results results/tempPlots results/tables/main results/tables/supplementary result/figures/main results/figures/supplementary</pre>
+
+```
+mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ data/birddata_ind/ scripts results results/tempPlots results/tables/main results/tables/supplementary result/figures/main results/figures/supplementary
+```
 
 ### Upload local data to cluster
 1. Upload all environmental data to `data/sst`, `data/ice` and `data/temp`
@@ -100,21 +105,27 @@ conda activate /cluster/projects/nn******/PROJECTNAME/cbird
 where nn****** is the project number and PROJECTNAME is your project name. 
 
  ### Run through steps in worflow
-The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one. Each step specifies expected input and output files, the R script which is called (contained in `code` folder), and requested walltime and memory usage. 
+The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one. Each step specifies expected input and output files, the R script which is called (contained in `scripts` folder), and requested walltime and memory usage. 
 
-To query the status of a step, enter the following code:
+To query the status of the first target to be run on the cluster, enter the following code:
 
-<pre> gwf status s1_3_merge_wetdry_lox* </pre>
+```
+gwf status s1_3_merge_wetdry_lox*
+```
 
 To run one of the steps, enter the following code:
 
-<pre> gwf run s1_3_merge_wetdry_lox* </pre>
+```
+gwf run s1_3_merge_wetdry_lox*
+```
 
 Note this specific example would submit six jobs as this step is parallelized. 
 
 To query the status of your job on SAGA, enter the following code:
 
-<pre> squeue -l -u ACOUNTNAME </pre>
+```
+squeue -l -u ACOUNTNAME
+```
 
 ## Key Contributors
 - [Caitlin Frankish](https://github.com/cfrankish): Lead developer and maintainer
