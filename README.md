@@ -82,6 +82,7 @@ conda environment (i.e. all software needed to conduct this analysis) is contain
 ```
 mkdir -p /cluster/projects/PROJECTNAME/conda
 mv Create_environment_cluster.sh /cluster/projects/PROJECTNAME/conda/.
+mv cbird.yml /cluster/projects/PROJECTNAME/conda/.
 cd /cluster/projects/PROJECTNAME/conda
 sbatch Create_environment_cluster.sh
 ```
