@@ -44,7 +44,7 @@ project/
 
 where:
 
-- `scripts/` – scripts (in this case `s1_1_merge_tracking_data_local.R` and `s1_2_download_env_data_local.R`)
+- `scripts/` – scripts (in this case `s0_1_merge_tracking_data_local.R` and `s0_2_download_env_data_local.R`)
 - `data/` – input datasets used by the project.
   - `wetdry_database/` – activity data by species with following format `wetdry_database_Black-legged kittiwake_2026-08-06.rds`
   - `wetdry_raw/` 
@@ -75,7 +75,7 @@ mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA
 ### Upload local data to cluster
 1. Upload all environmental data to `data/sst`, `data/ice` and `data/temp`
 
-2. Upload all activity data produced using `s1_1` to `data/wetdry_raw`
+2. Upload all activity data produced using `s0_1` to `data/wetdry_raw`
 
 3. Upload all IRMA positions to `data/positionsIRMA`
 
@@ -110,7 +110,7 @@ The workflow is created via gwf (https://gwf.app/) and is scripted within `workf
 Targets to be run can be matched with wildcards. For example, to query the status of the first target to be run on the cluster, enter the following code:
 
 ```
-gwf status s1_3*
+gwf status s1_1*
 ```
 
 If you get an error mentioning the backend, reconfigure this to slurm: 
@@ -130,7 +130,7 @@ Possible statuses are: `shouldrun` (ready to run), `submitted` (in the queue to 
 To run one of the steps, enter the following code:
 
 ```
-gwf run s1_3*
+gwf run s1_1*
 ```
 
 Note this specific example would submit six jobs (one per species) as this step is parallelized. 
