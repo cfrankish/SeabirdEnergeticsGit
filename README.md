@@ -27,8 +27,7 @@ This repository contains a workflow which can be used to calculate non-breeding 
     | individ_id | session_id | age_class | timestamp | loc_type | lon | lat |
     |------------|------------|-----------|-----------|----------|-----|-----|
     
-
-## 🔧How to use : local steps🔧
+## 🔧How to use: local steps 🔧
 
 ### Create local project with the following folders ###
 
@@ -61,7 +60,11 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 
 ## 🔧How to use : cluster steps🔧
 
-### Make all directories on cluster
+### Clone repository to SAGA ###
+
+`git clone https://github.com/cfrankish/SeabirdEnergeticsGit.git`
+
+### Alternatively, make all directories on cluster
 <pre>mkdir -p data/wetdry_raw data/sst data/ice data/sst data/temp data/positionsIRMA data/birddata_raw/ data/birddata_ind/ scripts results results/tempPlots results/tables/main results/tables/supplementary result/figures/main results/figures/supplementary</pre>
 
 ### Upload local data to cluster
@@ -76,15 +79,22 @@ Step s1_2: Extracts all unique dates and uses these to download environmental (S
 ### Install conda environment 
 conda environment (i.e. all software needed to conduct this analysis) is contained within the `cbird.yml` file. To install it, enter the following code in console: 
 
-<pre> sbatch Create_environment_cluster.sh </pre>
+```
+mkdir -p /cluster/projects/PROJECTNAME/conda
+mv Create_environment_cluster.sh /cluster/projects/PROJECTNAME/conda/.
+cd /cluster/projects/PROJECTNAME/conda
+sbatch Create_environment_cluster.sh
+```
 
 Make sure `Create_environment_cluster.sh` has been personalized first! (with account name etc.)
 
 Environment can then be activated using the following code:
 
-<pre>module load Miniconda3/22.11.1-1
+```
+module load Miniconda3/22.11.1-1
 source ${EBROOTMINICONDA3}/bin/activate
-conda activate /cluster/projects/nn******/PROJECTNAME/cbird </pre>
+conda activate /cluster/projects/nn******/PROJECTNAME/cbird
+```
 
 where nn****** is the project number and PROJECTNAME is your project name. 
 
@@ -107,6 +117,6 @@ To query the status of your job on SAGA, enter the following code:
 
 ## Key Contributors
 - [Caitlin Frankish](https://github.com/cfrankish): Lead developer and maintainer
-- [Mads Reinholdt Jensen](https://github.com/MadsRJ): Co-developer (input on using GWF) 
+- [Mads Reinholdt Jensen](https://github.com/MadsRJ): Co-developer (input on using gwf) 
 
 
