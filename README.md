@@ -107,11 +107,19 @@ where nn****** is the project number and PROJECTNAME is your project name.
  ### Run through steps in worflow
 The workflow is created via gwf (https://gwf.app/) and is scripted within `workflow.py`. This file contains all steps running from raw data extraction to the creation of figures. I recommend running through the steps one by one. Each step specifies expected input and output files, the R script which is called (contained in `scripts` folder), and requested walltime and memory usage. 
 
-To query the status of the first target to be run on the cluster, enter the following code:
+Targets to be run can be matched with wildcards. For example, to query the status of the first target to be run on the cluster, enter the following code:
 
 ```
 gwf status s1_3_merge_wetdry_lox*
 ```
+
+If you want the status of all targets in the workflow, simply run:
+
+```
+gwf status
+```
+
+Possible statuses are: `shouldrun` (ready to run), `submitted` (in the queue to run), `failed` :sob: (something went wrong and error message can be found in `.gwf/logs/` folder), or `completed` :star: (run without error)
 
 To run one of the steps, enter the following code:
 
@@ -119,7 +127,7 @@ To run one of the steps, enter the following code:
 gwf run s1_3_merge_wetdry_lox*
 ```
 
-Note this specific example would submit six jobs as this step is parallelized. 
+Note this specific example would submit six jobs (one per species) as this step is parallelized. 
 
 To query the status of your job on SAGA, enter the following code:
 
