@@ -1,6 +1,6 @@
 # ⚡Workflow for estimating activity budgets and energy expenditure for North Atlantic seabirds ⚡
 
-This repository contains a workflow which can be used to calculate non-breeding season activity budgets and energy expenditure for six species of pelagic seabirds in the North Atlantic from immersion and positional (GLS) data collected via the SEATRACK program (https://seatrack.net/). It uses a probabilistic approach where uncertainty and variation is included where possible and propagated through the workflow to the final results. It also performs all statistical analysis contained in xxxx (paper under review). 
+This repository contains a workflow which can be used to calculate non-breeding season activity budgets and energy expenditure for six species of pelagic seabirds in the North Atlantic from immersion and positional (GLS) data collected via the SEATRACK program (https://seatrack.net/). It uses a probabilistic approach where uncertainty and variation is included where possible and propagated through the workflow to the final results. It also performs all statistical analysis contained in Frankish et al. (<i>paper under review</i>). 
 
 ## 📄Simple Schematic of workflow📄
 
