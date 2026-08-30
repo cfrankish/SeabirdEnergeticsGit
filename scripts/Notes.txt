@@ -1,0 +1,18 @@
+Revising code:
+
+- Look over all steps #4
+
+- I will need to check that there is no personal information in all scripts once I finish going over them...
+
+- Update description of scripts
+
+- Make sure my results are backed-up & put them on the N Drive somewhere for safety + hard-drive?
+
+- I will have to decide what to put in the workflow on GitHub (remove personal information)
+
+- I will need to think of a wise plan to split Project #2 from Project #1
+
+- I want to add empty folders with READMEs to properly document my project structure and the content of each folder properly
+
+
+
