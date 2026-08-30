@@ -113,7 +113,7 @@ Targets to be run can be matched with wildcards. For example, to query the statu
 gwf status s1_3*
 ```
 
-If you get an error mentioning the backend, try to reconfigure this to slurm: 
+If you get an error mentioning the backend, reconfigure this to slurm: 
 
 ```
 gwf config set backend slurm
