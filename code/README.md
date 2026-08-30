@@ -4,21 +4,23 @@
 
 'North Atlantic seabirds exhibit strong variability in seasonal energy expenditure with implications for energetic bottlenecks and total non-breeding costs' (Frankish et al.)
 
-### Step 1 extracts & processes immersion data:
-- `s1_1_match_tracking_data_local.R`: By species, the script retains wet-dry IDs with IDs that are in the IRMA data, removes tracks with weird sampling intervals & juveniles. This step outputs species-specific files ('species_wetdry_date.csv') which are backed-up locally.
-- `s1_2_download_env_data_local.R`: this step downloads SST, sea ice and air temp data from COPERNICUS. 
-- `S1_3_merge_wetdry_lox_env.R`: merges immersion, location and environmental data by individual bird. Each 10-mins of data is also assigned day/night/twilight. Files are split into individual files stored in 'birddata_raw/speciesname/id.csv'
+### Step 0: Initial filter of immersion data & download of environmnental data (local):
+- `s0_1_match_tracking_data_local.R`: By species, the script retains wet-dry IDs with IDs that are in the IRMA data, removes tracks with weird sampling intervals & juveniles. This step outputs species-specific files ('species_wetdry_date.csv') which are backed-up locally.
+- `s0_2_download_env_data_local.R`: this step downloads SST, sea ice and air temp data from COPERNICUS.
+
+### Step 1: Merge all data streams together (cluster)
+- `S1_1_merge_wetdry_lox_env.R`: merges immersion, location and environmental data by individual bird. Each 10-mins of data is also assigned day/night/twilight. Files are split into individual files stored in 'birddata_raw/speciesname/id.csv'
   
-### Step 2 calculates daily activity budgets and energy expenditure:
+### Step 2 calculates daily activity budgets and energy expenditure (cluster):
 - `S2_1_calculatebudgets.R`: calculates the above for every individual bird x 100. Input file is 'birddata_raw/speciesname/id.csv', and output file is 'tmp/id_energyDay.csv'.
 - `S2_2_sensitivity_analysis_part1.R`: conducts sensitivity analysis whereby activity & energy is calculated for every individual where each parameter used in our energetic approach is modified in turn according to a few values. Input file is 'birddata_raw/speciesname/id.csv', and output file is 'tmp2/id_energyDay.csv'.
 - `S2_3_sensitivity_analysis_part2.R`: gathers individual files, and summarizes the effect of changing each parameter on weekly variation and total energy expenditure for the six species. Outputs Figures S9-S10. 
 
-### Step 3 runs some supplementary analyses:
+### Step 3 runs some supplementary analyses (cluster):
 - `S3_1_supanalysis_min_iteration_number.R`: Conducts an analysis where it calculates total non-breeding season energy expenditure for an increasing number of iterarions so I can decide what a good number is for further analysis. It outputs Figure S11 and S12. 
 - `S3_2_supanalysis_check_bout_lengths.R`: Does some checks to validate my approach for dry bout allocation. Specifically, it looks into how many dry bouts are allocated to flight vs. land at random, calculates the duration of flight bouts during darkness, and creates a distribution plot of fulmar flight bout lengths. It outputs Figures S5-7.
 
-### Step 4 mainly conducts the main analysis:
+### Step 4 mainly conducts the main analysis (cluster):
 - `S4_1_mainanalysis_plot_maps_budgets.R`: This script maps the distribution of the study populations and their non-breeding season distributions (Figures 1, S1 & S2). It also estimates yearly activity budgets, SST & energy expenditure at a species and population-level for visual exploration.
 - `S4_2_mainanalysis_calc_metrics.R`: This script calculates migratory distance and weekly variation in energy expenditure used to make Figure 3B. It also outputs all supplementary figures showing weekly deviation in different behaviours & SST (Figures S16-S21).
 - `S4_3_mainanalysis_calc_metrics.R`: This script conducts all statistics in the manuscript. It outputs figures 2, 3A & all remaining supplementary figures (Figures S8, 14-34).
