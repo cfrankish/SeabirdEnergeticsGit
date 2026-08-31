@@ -2,7 +2,7 @@
 
 ## Scripts needed to run workflow for paper in review:
 
-'North Atlantic seabirds exhibit strong variability in seasonal energy expenditure with implications for energetic bottlenecks and total non-breeding costs' (Frankish et al.)
+Frankish et al. in review
 
 ### Step 0: Initial filter of immersion data & download of environmnental data (local):
 - `s0_1_match_tracking_data_local.R`: By species, the script retains wet-dry IDs with IDs that are in the IRMA data, removes tracks with weird sampling intervals & juveniles. This step outputs species-specific files ('species_wetdry_date.csv') which are backed-up locally.
