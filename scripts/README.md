@@ -1,4 +1,4 @@
-# Code
+# Scripts
 
 ## Scripts needed to run workflow for paper in review:
 
