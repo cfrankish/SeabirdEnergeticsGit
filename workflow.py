@@ -11,7 +11,7 @@ from glob import glob
 gwf = Workflow(defaults={"account": "xxxxxxxx"}) # Remember to change account number as needed!
 
 ###########################################################################################
-### Step 1_3: Merge, clean data streams & split into individual bird files ################
+### Step 1_1: Merge, clean data streams & split into individual bird files ################
 ###########################################################################################
 
 # Determine the directory containing individual csv files #
