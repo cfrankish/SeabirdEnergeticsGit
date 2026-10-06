@@ -54,9 +54,9 @@ where:
   - `temp/` 
 
 ### Run local code (steps s1_1 and s1_2)  
-Step s1_1: processes the immersion data and merges it with the IRMA data.
+Step s0_1: processes the immersion data and merges it with the IRMA data.
 
-Step s1_2: Extracts all unique dates and uses these to download environmental (SST, air temperature and sea-ice concentration rasters) from (https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=overview))
+Step s0_2: Extracts all unique dates and uses these to download environmental (SST, air temperature and sea-ice concentration rasters) from (https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=overview))
 
 ## 🔧How to use : cluster steps🔧
 
