@@ -1724,72 +1724,103 @@ if (species=="Black-legged kittiwake") {
 
 ##### Kittiwake #####
 
-# sst is in degrees is fixed right now to 10 degrees but will eventually be pulled from a map
-# RMR is resting metabolic rate & equal to 1.64 mL O2 g-1 h-1 Gabrielsen et al. 1988
-# beta is intercept of RMR at sst = 0 degrees, 
-# TC is thermal conductance in wate: 0.1000 mL O2 g-1 h-1 °C-1 (Gabrielsen et al. 1988)
-# Weight is weight in g - fixed to 365 g at the moment (Gabrielsen et al., 1988)
-# cf is caloric conversion factor of 20.1 J per mL O2 (Schmidt-Nielsen 1997)
-
 calculateEnergetics_BLK_daily<-function(data, weightG) {
   
-  #print("Hallo")
+# PURPOSE: Calculate daily energy expenditure for Black-legged kittiwakes from
+# activity budgets, body mass, and environmental temperature.
   
-  # cf is caloric conversion factor of 20.1 J per mL O2 (Schmidt-Nielsen 1997)
-  cf<-20.1
+# Broad workflow:
+# 1. Extract activity-specific energetic and thermoregulatory parameters.
+# 2. Convert activity-cost coefficients to hourly energetic costs.
+# 3. Scale energetic parameters from reference body masses to the focal body mass.
+# 4. Define temperature-dependent energetic costs below lower critical temperatures.
+# 5. Calculate energetic costs separately for each activity.
+# 6. Sum activity-specific costs to estimate total daily energy expenditure.
   
-  # We determine RMR
-  RMR<-data$RMR[1]
+# INPUTS
+# data- data frame containing daily activity budgets, environmental
+# conditions, and energetic parameters
+# weightG - body mass used to scale energetic costs (g)
   
-  # Rest coef is generated from Tremblay et al. sample size is 50
-  restCoef<-data$c4[1]
-  restCoef<-restCoef/24 # kJ.g.hr
+# RETURNS
+# A data frame containing the original daily activity data plus activity-specific
+# and total daily energy expenditure estimates (kJ).
   
-  # forage coef is generated from  Tremblay et al 2024 & is a mix of flapping & swim
-  forageCoef<-data$c2[1]/24 # kJ.g.hr
+# 1: EXTRACT & CONVERT ENERGETIC PARAMETERS
   
-  # land coef taken from Tremblay et al. 
-  landCoef<-data$c3[1]
-  landCoef<-landCoef/24 # kJ.g.hr
+# Caloric conversion factor used to convert oxygen consumption to energetic
+# expenditure (20.1 J per mL O2; Schmidt-Nielsen 1997).
+cf<-20.1
   
-  # Flap coef are from Tremblay et al. 
-  flightCoef<-data$c1[1]
-  flightCoef<-flightCoef/24 # kJ.g.hr
+# Extract activity-specific energetic coefficients. Coefficients derived from
+# Tremblay et al. 2024 are converted from daily to hourly energetic costs.
+
+# Rest on Water:
+restCoef<-data$c4[1]  # kJ.g.day
+restCoef<-restCoef/24 # kJ.g.hr
   
-  # We will make a fake error distribution for beta & TC based on mean errors for other variables which is 29%
-  betaCoef<-data$Beta_rest[1]
-  TCCoef_water<-data$TC_water[1]
-  TCCoef_air<-data$TC_air[1]
+# Foraging: 
+forageCoef<-data$c2[1]/24 # kJ.g.hr
   
-  # Account for change in constants
-  flightConstantx<-((flightCoef*450)/450^0.717)*weightG^0.717
-  restConstant2x<-((restCoef*450)/450^0.717)*weightG^0.717
-  forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.717
-  landConstantx<-((landCoef*450)/450^0.717)*weightG^0.717
-  betax<-(((betaCoef*cf/1000)*365)/365^0.717)*weightG^0.717
-  TCx_water<-(((TCCoef_water*cf/1000)*365)/365^0.717)*weightG^0.717
-  TCx_air<-(((TCCoef_air*cf/1000)*365)/365^0.717)*weightG^0.717
+# On land: 
+landCoef<-data$c3[1]
+landCoef<-landCoef/24 # kJ.g.hr
   
-  # Adjust beta so that beta-SST*TC is equal to rest constant 2 at LCT
-  LCT_water<-data$LCT_water[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
-  LCT_air<-data$LCT_air[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
-  restConstant1x<-(LCT_water*TCx_water + restConstant2x)
-  beta_land<-landConstantx + LCT_air*TCx_air
+# Flight: 
+flightCoef<-data$c1[1]
+flightCoef<-flightCoef/24 # kJ.g.hr
   
-  # Calculate energetics
-  energySub2<-data %>%
-    dplyr::group_by(date) %>%
-    #dplyr::mutate(DEEkJ=ifelse(sst_random <= LCT_newRest, flightConstant*tFlight + forageConstant*tForage + (restConstant1 - TC*sst_random)*tRestWater +  landConstant*tLand, flightConstant*tFlight + forageConstant*tForage + restConstant3*tRestWater + landConstant*tLand)) %>%
-    dplyr::mutate(DEEkJ_active=0, DEEkJ_active_col=0) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT_water, (restConstant1x - TCx_water*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT_water, (restConstant1x - TCx_water*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_flight=flightConstantx*tFlight) %>%
-    dplyr::mutate(DEEkJ_forage=forageConstantx*tForage) %>%
-	dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TCx_air)*tLand, landConstantx*tLand)) %>%
-	dplyr::mutate(DEEkJ_restland2=landConstantx*tLand) %>%
-	dplyr::mutate(DEEkJ=DEEkJ_rest + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
-	dplyr::mutate(DEEkJ_col=DEEkJ_rest_col + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
-    dplyr::mutate(weight=weightG)
+# Extract parameters used to calculate temperature-dependent energetic costs.
+TCCoef_water<-data$TC_water[1] # kJ g-1 hr-1 C-1
+TCCoef_air<-data$TC_air[1] # kJ g-1 hr-1 C-1
+  
+# 2: SCALE ENERGETIC PARAMETERS TO BODY MASS
+
+# Scale activity-specific energetic costs from the reference body mass of 450 g
+# to the focal body mass using a mass-scaling exponent of 0.717.
+flightConstantx<-((flightCoef*450)/450^0.717)*weightG^0.717
+restConstant2x<-((restCoef*450)/450^0.717)*weightG^0.717
+forageConstantx<-((forageCoef*450)/450^0.717)*weightG^0.717
+landConstantx<-((landCoef*450)/450^0.717)*weightG^0.717
+
+# Convert and scale the resting intercept and thermal-conductance parameters.
+# These parameters use a reference body mass of 365 g.
+TCx_water<-(((TCCoef_water*cf/1000)*365)/365^0.717)*weightG^0.717
+TCx_air<-(((TCCoef_air*cf/1000)*365)/365^0.717)*weightG^0.717
+
+# 3: DEFINE TEMPERATURE-DEPENDENT RESTING COSTS
+
+# Below the lower critical temperature (LCT), energetic expenditure increases
+# as environmental temperature decreases. Separate LCTs are used for birds
+# resting on water and on land.
+LCT_water<-data$LCT_water[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+LCT_air<-data$LCT_air[1] # https://onlinelibrary.wiley.com/doi/full/10.1111/j.1474-919X.2006.00618.x
+
+# Calculate intercepts so that temperature-dependent energetic costs below the
+# LCT meet the thermoneutral activity cost at the corresponding LCT.
+restConstant1x<-(LCT_water*TCx_water + restConstant2x)
+beta_land<-landConstantx + LCT_air*TCx_air
+
+# 4: CALCULATE DAILY ENERGY EXPENDITURE
+
+# Calculate energetic expenditure separately for each activity. Resting costs
+# on water and land increase below their respective lower critical temperatures,
+# whereas flight and foraging costs are independent of temperature here.
+  
+energySub2<-data %>%
+  dplyr::group_by(date) %>%
+  dplyr::mutate(DEEkJ_active=0, DEEkJ_active_col=0) %>%
+  dplyr::mutate(DEEkJ_rest=ifelse(sst_random <=LCT_water, (restConstant1x - TCx_water*sst_random)*tRestWater, restConstant2x*tRestWater)) %>%
+  dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <=LCT_water, (restConstant1x - TCx_water*sst_random_colony)*tRestWater, restConstant2x*tRestWater)) %>%
+  dplyr::mutate(DEEkJ_flight=flightConstantx*tFlight) %>%
+  dplyr::mutate(DEEkJ_forage=forageConstantx*tForage) %>%
+  dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TCx_air)*tLand, landConstantx*tLand)) %>%
+  dplyr::mutate(DEEkJ_restland2=landConstantx*tLand) %>%
+  dplyr::mutate(DEEkJ=DEEkJ_rest + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
+  dplyr::mutate(DEEkJ_col=DEEkJ_rest_col + DEEkJ_flight + DEEkJ_forage + DEEkJ_restland) %>%
+  dplyr::mutate(weight=weightG)
+
+# 5: PREPARE OUTPUT
   
   return(energySub2)
   
@@ -1874,12 +1905,6 @@ calculateEnergetics_BLK_daily_map<-function(data, weightG, sstVals) {
 }
 
 ##### Northern fulmar #####
-
-# RMR is resting metabolic rate & equal to 1.00 mL O2 g-1 h-1 Gabrielsen et al. 1988
-# beta is intercept of RMR at sst = 0 degrees, 
-# TC is thermal conductance in wate: 0.04 mL O2 g-1 h-1 °C-1 (Gabrielsen et al. 1988)
-# Weight is weight in g - fixed to 651 g at the moment (Gabrielsen et al., 1988)
-# cf is caloric conversion factor of 20.1 J per mL O2 (Schmidt-Nielsen 1997)
 
 calculateEnergetics_NF_daily<-function(data, weightG) {
   
