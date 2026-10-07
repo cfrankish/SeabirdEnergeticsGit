@@ -1528,6 +1528,37 @@ assignTimePeriod<-function(data) {
 # Function re-directs to individual species functions but will return daily energy expenditure values
 
 calculateEnergetics<-function(species, data, colonySub, sstVals, type, type2) {
+  
+# PURPOSE: Calculate energy expenditure from activity budgets by directing each
+# species to the appropriate species-specific energetic function.
+  
+# Broad workflow:
+#   1. Print the energetic parameter values used in the calculation.
+#   2. Identify individual tracking sessions.
+#   3. Loop through each session separately.
+#   4. Assign species-specific body mass and other required constants.
+#   5. Select the appropriate energetic function according to species and data source.
+#   6. Add body mass and session ID to the results.
+#   7. Combine results across sessions.
+  
+# INPUTS
+#   species   - species being analysed
+#   data      - data frame containing activity budgets and energetic parameters
+#   colonySub - colony associated with the individual
+#   sstVals   - data used to provide SST values for map-based calculations
+#   type      - temporal resolution of the calculation (e.g. "daily")
+#   type2     - source of environmental data ("ind" for individual locations,
+#               "map" for population-level maps)
+  
+# RETURNS
+# A data frame containing energy-expenditure estimates for all tracking sessions.
+  
+  
+# 1: PRINT ENERGETIC PARAMETERS
+  
+# Print the parameter values selected for this iteration. These include
+# activity-specific energetic costs and parameters describing thermoregulatory
+# costs in air and water.
  
 # Print randomized parameter values
 print(paste0("RMR = ", data$RMR[1]))
@@ -1543,17 +1574,23 @@ print(paste0("Beta_rest = ", data$Beta_rest[1]))
 print(paste0("LCT_water = ", data$LCT_water[1]))
 print(paste0("LCT_air = ", data$LCT_air[1]))
 
-# Determine sessions to loop through
+# 2: IDENTIFY TRACKING SESSIONS
+
+# Energetic calculations are carried out separately for each tracking session
+# before being combined into a single output.
+
 sessionNo<-unique(data$session_id)
 
-# List to save results in
+# Create an object to store results across sessions.
 energyAll<-list() # Make a list to save results in
 
-# Loop through the sessions
+# 3: LOOP THROUGH TRACKING SESSIONS
+
 for (session in 1:length(sessionNo)) {
 
 print(paste0("Calculating energy for session ", session))
 
+# Subset activity data to the current tracking session.
 dataSub<-subset(data, session_id %in% sessionNo[session]) 
  
 if (species=="Black-legged kittiwake") {
@@ -1568,7 +1605,7 @@ if (species=="Black-legged kittiwake") {
     
   if (type =="daily" & type2=="map") {
       
-    energySpent<-calculateEnergetics_BLK_daily_map(data, weightG, sstVals)  
+  energySpent<-calculateEnergetics_BLK_daily_map(data, weightG, sstVals)  
       
     } 
     
@@ -1576,17 +1613,17 @@ if (species=="Black-legged kittiwake") {
   
   if (species=="Northern fulmar") {
     
-	weightG<-728
+  weightG<-728
     
     if (type =="daily"& type2=="ind") {
       
-      energySpent<-calculateEnergetics_NF_daily(dataSub, weightG)  
+  energySpent<-calculateEnergetics_NF_daily(dataSub, weightG)  
       
     } 
 	
 	if (type =="daily" & type2=="map") {
       
-      energySpent<-calculateEnergetics_NF_daily_map(data, weightG, sstVals)  
+  energySpent<-calculateEnergetics_NF_daily_map(data, weightG, sstVals)  
       
     } 
     
@@ -1595,17 +1632,17 @@ if (species=="Black-legged kittiwake") {
   if (species=="Common guillemot") {
     
   CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-940
+  weightG<-940
     
     if (type =="daily" & type2=="ind") {
       
-      energySpent<-calculateEnergetics_CoGu_daily(dataSub,  CostDivider,  weightG)  
+  energySpent<-calculateEnergetics_CoGu_daily(dataSub,  CostDivider,  weightG)  
       
     } 
     
     if (type =="daily" & type2=="map") {
       
-      energySpent<-calculateEnergetics_CoGu_daily_map(data, CostDivider, weightG, sstVals)  
+  energySpent<-calculateEnergetics_CoGu_daily_map(data, CostDivider, weightG, sstVals)  
       
     } 
     
@@ -1614,17 +1651,17 @@ if (species=="Black-legged kittiwake") {
   if (species=="Brünnich's guillemot") {
     
   CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-980
+  weightG<-980
     
     if (type =="daily" & type2=="ind") {
       
-      energySpent<-calculateEnergetics_BrGu_daily(dataSub,  CostDivider, weightG)  
+  energySpent<-calculateEnergetics_BrGu_daily(dataSub,  CostDivider, weightG)  
       
     } 
     
     if (type =="daily" & type2=="map") {
       
-      energySpent<-calculateEnergetics_BrGu_daily_map(data, CostDivider, weightG, sstVals)  
+  energySpent<-calculateEnergetics_BrGu_daily_map(data, CostDivider, weightG, sstVals)  
       
     } 
     
@@ -1633,17 +1670,17 @@ if (species=="Black-legged kittiwake") {
   if (species=="Little auk") {
     
   CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-149
+  weightG<-149
     
     if (type =="daily" & type2=="ind") {
       
-      energySpent<-calculateEnergetics_LiA_daily(dataSub,  CostDivider,  weightG)  
+  energySpent<-calculateEnergetics_LiA_daily(dataSub,  CostDivider,  weightG)  
       
     } 
     
     if (type =="daily" & type2=="map") {
       
-      energySpent<-calculateEnergetics_LiA_daily_map(data, CostDivider, weightG, sstVals)  
+  energySpent<-calculateEnergetics_LiA_daily_map(data, CostDivider, weightG, sstVals)  
       
     } 
     
@@ -1652,27 +1689,34 @@ if (species=="Black-legged kittiwake") {
   if (species=="Atlantic puffin") {
     
   CostDivider<-803 # g (mean weight of all BrG as I can't find the mass of birds in Kyle's paper)  
-	weightG<-395
+  weightG<-395
     
     if (type =="daily" & type2=="ind") {
       
-      energySpent<-calculateEnergetics_AP_daily(dataSub,  CostDivider, weightG)  
+  energySpent<-calculateEnergetics_AP_daily(dataSub,  CostDivider, weightG)  
       
     } 
     
     if (type =="daily" & type2=="map") {
       
-      energySpent<-calculateEnergetics_AP_daily_map(data, CostDivider, weightG,  sstVals)  
+  energySpent<-calculateEnergetics_AP_daily_map(data, CostDivider, weightG,  sstVals)  
       
     } 
     
   } 
+
+# 4: COMBINE SESSION RESULTS
+
+# Add the species-specific body mass and original session identifier to the
+# energetic estimates before combining results across tracking sessions.
   
   energySpent$weight<-weightG 
   energySpent$session_id<-sessionNo[session]
   energyAll<-rbind(energyAll, energySpent)
   
-  }
+}
+
+# 5: PREPARE OUTPUT
   
   return(energyAll)    
   
