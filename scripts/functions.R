@@ -2104,93 +2104,119 @@ calculateEnergetics_NF_daily_map<-function(data, weightG, sstVals) {
 
 ##### Common guillemot #####
 
-# CostDivider is mean weight in g of all available weight data for this species (from database). It will be used to
-# calculate energy cost per g
-# beta is intercept of RMR at sst = 0 degrees & here we have two for different activities -> see Kyle & Gaston 2014 J per hr
-# TC is thermal conductance in water: 2.75 -> Kyle & Gaston 2014 J/hr
-# Weight is weight in g - it will be a mean from colony-specific values
-# LCT is lower critical tolerance -> 14.3 (following Buckingham et al. - in review)
-# otherwise whole energetic equation is from Kyle & Gaston 2014/Buckingham et al. in review
-
 calculateEnergetics_CoGu_daily<-function(data, CostDivider, weightG) {
   
-  # First I set up the activity cost multipliers which are from Elliott & Gaston et al. & Buckingham (in review)
-  flightCoef<-data$c1[1]
-  flightCoef_kj<-flightCoef*3.6 # kJ.hr
+# PURPOSE: Calculate daily energy expenditure for Common guillemots from
+# activity budgets, body mass, and environmental temperature.
   
-  # Add a fake error based on error distribution of other terms 
-  activeCoef<-data$Beta_active[1] # kj.hr
-  restCoef1<-data$Beta_rest[1] # kj.hr
-  TC_water<-data$TC_water[1] # kJ.hr
-  TC_air<-data$TC_air[1] # ml O2 hr
+# Broad workflow:
+# 1. Extract activity-specific energetic and thermoregulatory parameters.
+# 2. Convert energetic coefficients to the units required by the model.
+# 3. Scale energetic parameters from the reference body mass to the focal body mass.
+# 4. Define temperature-dependent energetic costs below lower critical temperatures.
+# 5. Calculate energetic costs separately for each activity.
+# 6. Sum activity-specific costs to estimate total daily energy expenditure.
   
-  # Rest & land coefs
-  restCoef2<-data$c4[1]
-  restCoef2_kj<-restCoef2*3.6 #kJ.hr
+# INPUTS
+# data - data frame containing daily activity budgets, environmental
+# conditions, and energetic parameters
+# CostDivider - reference body mass used for allometric scaling (g)
+# weightG  - body mass used to scale energetic costs (g)
   
-  landCoef<-data$c3[1]
-  landCoef_kj<-landCoef*3.6 # kj.hr -> should be the same as the rest coefficient
+# RETURNS
+# A data frame containing the original daily activity data plus activity-specific
+# and total daily energy expenditure estimates (kJ).
   
-  # Active coef when thermoneutral (from kyle's paper)
-  #activeCoef_neut<-data$c5[1]
-  #activeCoef_neut_kj<-activeCoef_neut*3.6 # kJ.hr
+# 1: EXTRACT & CONVERT ENERGETIC PARAMETERS
   
-  #if (activeCoef_neut_kj > activeCoef) stop (print("Error with active coefs")) # Because the coef when thermoneutral must be lower...
+# Extract the energetic cost of flight and convert to kJ per hour
   
-  # Here is a conversion factor to transform these to g.kj which incorporates allometric scaling
-  convf<-1/CostDivider^0.689 # no wing loading
+flightCoef<-data$c1[1]
+flightCoef_kj<-flightCoef*3.6 # kJ.hr
   
-  # Account for change in constants
-  flightConstant<-(flightCoef_kj*convf)*weightG^0.689
-  activeConstant<-(activeCoef*convf)*weightG^0.689
- # activeConstant2<-(activeCoef_neut_kj*convf)*weightG^0.689
-  restConstant1<-(restCoef1*convf)*weightG^0.689
-  restConstant2<-(restCoef2_kj*convf)*weightG^0.689
-  TC_water_Constant<-(TC_water*convf)*weightG^0.689
-  TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
-  landConstant<-(landCoef_kj*convf)*weightG^0.689
+# Extract the intercepts used to describe temperature-dependent energetic costs
+# for active and resting birds on water, together with thermal conductance in
+# water and air.
+
+activeCoef<-data$Beta_active[1] # kj.hr
+restCoef1<-data$Beta_rest[1] # kj.hr
+TC_water<-data$TC_water[1] # kJ.hr
+TC_air<-data$TC_air[1] # ml O2 hr
   
-  # LCT is 14.18 (Buckingham et al. 2025)
-  LCT_water<-data$LCT_water[1]
-  restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
-  activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+# Extract the thermoneutral resting-water and land costs and convert them to
+# kJ per hour.
+
+restCoef2<-data$c4[1]
+restCoef2_kj<-restCoef2*3.6 #kJ.hr
   
-  LCT_air<-data$LCT_air[1]
-  beta_land<-landConstant + TC_air_Constant*LCT_air
+landCoef<-data$c3[1]
+landCoef_kj<-landCoef*3.6 # kj.hr 
   
-  # And now we calculate new LCT?
-  #LCT_newActive<-(activeConstant-restConstant2)/TC_Constant
-  #LCT_newActive<-(activeConstant-activeConstant2)/TC_Constant
-  #LCT_newRest<-(restConstant1-restConstant2)/TC_Constant
+# 2: SCALE ENERGETIC PARAMETERS TO BODY MASS
+
+# Calculate the conversion factor used to scale energetic costs from the
+# reference body mass to the focal body mass using an exponent of 0.689.
   
-  # Determine whether any temps are above LCT active
-  #temps<-subset(data, sst_random > LCT_newActive)
+convf<-1/CostDivider^0.689 
   
- # if (nrow(temps)>0) {
- #   stop(print("Active LCT has an issue"))
- # }
+# Apply allometric scaling to activity-specific costs and water
+# thermoregulatory parameters.
+
+flightConstant<-(flightCoef_kj*convf)*weightG^0.689
+activeConstant<-(activeCoef*convf)*weightG^0.689
+landConstant<-(landCoef_kj*convf)*weightG^0.689
+restConstant1<-(restCoef1*convf)*weightG^0.689
+restConstant2<-(restCoef2_kj*convf)*weightG^0.689
+TC_water_Constant<-(TC_water*convf)*weightG^0.689
+
+# Convert thermal conductance in air from oxygen consumption to kJ and scale
+# from its reference body mass to the focal body mass.
+
+TC_air_Constant<-TC_air*20.1/1000*819.3/819.3^0.689*weightG^0.689
   
-  energySub2<-data %>%
-    dplyr::group_by(date) %>%
-	#dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_newActive, (activeConstant-sst_random*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
-	#dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_newActive, (activeConstant-sst_random_colony*TC_Constant)*tActive, activeConstant2*tActive)) %>%
-	dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
-	#dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_newRest, (restConstant1 - TC_Constant*sst_random)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
-	#dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_newRest, (restConstant1 - TC_Constant*sst_random_colony)*tRestWater , restConstant2*tRestWater)) %>%
-	dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
-    dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
-    dplyr::mutate(DEEkJ_forage=0) %>%
-	dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TC_air_Constant)*tLand, landConstant*tLand)) %>%
-    dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
-	dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
-	dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
-    dplyr::mutate(weight=weightG)
-	#dplyr::mutate(LCT_active=LCT_newActive) %>%
-	#dplyr::mutate(LCT_rest=LCT_newRest)
+# 3: DEFINE TEMPERATURE-DEPENDENT ACTIVITY COSTS
+
+# Below the lower critical temperature (LCT), energetic costs on water increase
+# as SST decreases. Above the LCT, costs are held at their value at the LCT.
+
+LCT_water<-data$LCT_water[1]
+
+# Calculate the active and resting costs at the water LCT. These provide the
+# constant thermoneutral costs used when SST is above the LCT.
+
+restConstant_adjust<-restConstant1 - LCT_water*TC_water_Constant # So that rest is equal to land when sst > LCT
+activeConstant_adjust<-activeConstant - LCT_water*TC_water_Constant
+
+# Define the corresponding temperature-dependent relationship for birds on
+# land. The intercept is set so that energetic cost at the air LCT equals the
+# thermoneutral land cost.
+
+LCT_air<-data$LCT_air[1]
+beta_land<-landConstant + TC_air_Constant*LCT_air
   
-  return(energySub2)
+# 4: CALCULATE DAILY ENERGY EXPENDITURE
+
+# Calculate energetic expenditure separately for each activity. Active and
+# resting costs on water increase below the water LCT, while land costs increase
+# below the air LCT.
+  
+energySub2<-data %>%
+  dplyr::group_by(date) %>%
+  dplyr::mutate(DEEkJ_active=ifelse(sst_random <=LCT_water, (activeConstant-sst_random*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+  dplyr::mutate(DEEkJ_active_col=ifelse(sst_random_colony <=LCT_water, (activeConstant-sst_random_colony*TC_water_Constant)*tActive, activeConstant_adjust*tActive)) %>%
+  dplyr::mutate(DEEkJ_rest=ifelse(sst_random <= LCT_water, (restConstant1 - TC_water_Constant*sst_random)*tRestWater , restConstant_adjust*tRestWater)) %>%
+  dplyr::mutate(DEEkJ_rest_col=ifelse(sst_random_colony <= LCT_water, (restConstant1 - TC_water_Constant*sst_random_colony)*tRestWater , restConstant_adjust*tRestWater)) %>%
+  dplyr::mutate(DEEkJ_flight=flightConstant*tFlight) %>%
+  dplyr::mutate(DEEkJ_forage=0) %>%
+  dplyr::mutate(DEEkJ_restland=ifelse(air_random <= LCT_air, (beta_land - air_random*TC_air_Constant)*tLand, landConstant*tLand)) %>%
+  dplyr::mutate(DEEkJ_restland2=landConstant*tLand) %>%
+  dplyr::mutate(DEEkJ=DEEkJ_active + DEEkJ_rest + DEEkJ_flight + DEEkJ_restland) %>%
+  dplyr::mutate(DEEkJ_col=DEEkJ_active_col + DEEkJ_rest_col + DEEkJ_flight + DEEkJ_restland) %>%
+  dplyr::mutate(weight=weightG)
+
+# 5: PREPARE OUTPUT
+  
+return(energySub2)
   
 }
 
