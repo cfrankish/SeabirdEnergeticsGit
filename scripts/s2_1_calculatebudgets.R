@@ -34,7 +34,7 @@ overall.iterations<-100 # how many times this is calculated per individual
 
 #### Step s2_1_1: assign location of files & functions ####
 
-# Source all necessary functions
+# Source all necessary functions for calculating activity budgets and energy expenditure
 source("./scripts/functions.R")
 
 # Determine location of processed locations (IRMA data) 
@@ -46,6 +46,7 @@ colnames(irma.files.df)<-c("FileName")
 irma.files.df$species<-c("Little auk", "Atlantic puffin", "Northern fulmar", "Black-legged kittiwake", "Common guillemot", "Brünnich's guillemot")
 
 # Determine model parameters to choose from #
+# Note: for activity cost multipliers with a range of values, these correspond to lower and upper 95% confidence intervals (see Table S3 in publication)
 speciesNo<-6
 paramNo<-19
 modelParams<-tibble(species=rep(c("Black-legged kittiwake", "Northern fulmar", "Atlantic puffin", "Little auk", "Common guillemot", "Brünnich's guillemot"), paramNo))
@@ -55,28 +56,28 @@ modelParams$values<-list(
 240, 810, 90, 134, 88, 88, # Species-specific flight bout duration (minutes)
 0.95, 0.95, c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), c(0.85, 0.9), # Th1 % wet threshold for differenciating between behaviors
 0, 0, 0, 0, 0, 0, # Th2 #% wet for determing dry vs. intermediate
-c(0, 240), c(0, 810), c(0, 90), c(0, 134), c(0, 88), c(0, 88), # L1_colony: duration of dry bouts at start of tLand that can re-allocated to flight
+c(0, 240), c(0, 810), c(0, 90), c(0, 134), c(0, 88), c(0, 88), # L1_colony: duration of dry bouts at start of tLand that can be re-allocated to flight in minutes
 500, 500, 500, 500, 500, 500,  # Distance to colony (km) below which it is considered possible to be on land
 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, # pland: probability of dry being land or something else
 c(seq(1.5, 3, 0.1)), c(seq(1.5, 3, 0.1)), c(seq(1.5, 3, 0.1)), c(seq(1.5, 3, 0.1)), c(seq(1.5, 3, 0.1)), c(seq(1.5, 3, 0.1)), # coefficient for adjusting for leg-tucking
-c(0), c(seq(0.96, 1.04, 0.01)), c(0), c(0), c(0), c(0), # RMR is just for a few of the species...BlKi / NoFu (Resting metabolic rate)
-c(seq(2, 5.7, 0.1)), c(2.2), c(seq(106, 176, 1)), c(seq(5.4, 11.5, 0.1)), c(seq(106, 176, 1)), c(seq(106, 176, 1)), # c1 is the cost of Flight
-c(seq(0.3, 3.8, 0.1)), c(seq(0.3, 3.8, 0.1)), c(0), c(0), c(0), c(0), # c2 is the cost of foraging...
-c(seq(0.05, 1.1, 0.1)), c(0.8), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c3 is cost of being on land...
-c(seq(0.1, 2.8, 0.1)), c(2), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c4 is the cost of resting on the water...
-c(0), c(0), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), # c5 is the cost of being active on water when thermoneutral...(currently made in the code)
+c(0), c(seq(0.96, 1.04, 0.01)), c(0), c(0), c(0), c(0), # RMR is just for NoFu and stands for Resting metabolic rate in ml O2 g-1 hr-1
+c(seq(2, 5.7, 0.1)), c(2.2), c(seq(106, 176, 1)), c(seq(5.4, 11.5, 0.1)), c(seq(106, 176, 1)), c(seq(106, 176, 1)), # c1 is the cost of Flight in source units (see Table S3 in publication)
+c(seq(0.3, 3.8, 0.1)), c(seq(0.3, 3.8, 0.1)), c(0), c(0), c(0), c(0), # c2 is the cost of foraging in source units (see Table S3 in publication). Note, here is shown cost of swimming. c2 for Blki & Nofu is an average of these values and cost of flapping (c1). An averaging occurs later in the script.  
+c(seq(0.05, 1.1, 0.1)), c(0.8), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c3 is cost of being on land in source units (see Table S3 in publication). 
+c(seq(0.1, 2.8, 0.1)), c(2), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), c(seq(3.1, 15.3, 0.1)), # c4 is the cost of resting on the water in source units (see Table S3 in publication). Note the lower limit of Blki was adjusted to 0.1 to avoid being negative, and it represents cost of rest (see Tremblay et al. 2024). c4 is an average of swimming and rest and the averaging occurs later in the script. 
+c(0), c(0), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), # c5 is the cost of being active on water when thermoneutral...(these values are no longer used, c5 is made in the code)
 c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), c(list(seq(26 - 1.96*6, 29, 0.01), seq(27 - 1.96*12, 29, 0.01))), 
-c(0.0997), c(0.07), # TC is thermal conductivity (code is TC - 1.96*TCError)
+c(0.0997), c(0.07), # TC is thermal conductivity in water in kJ g-1 hr-1 C-1 for Blki and NoFu & kJ hr-1 C-1 for auks
 c(2.75), c(2.75),
 c(2.75), c(2.75),
-c(0), c(0), c(118),  # Intercepts of resting metabolic rate at 0°C during different activities (active)
+c(0), c(0), c(118),  # Intercepts of resting metabolic rate at 0°C during different activities (active) in kJ hr-1
 c(118), c(118), c(118),
-c(1.87), c(1.34),# # Intercepts of resting metabolic rate at 0°C during different activities (rest)
+c(0), c(0),# # Intercepts of resting metabolic rate at 0°C during different activities (rest) in kJ hr-1
 c(72.2), c(72.2),
 c(72.2), c(72.2),
-12.5, 9, 14.18, 14.18, 14.18, 14.18, # LCT in water
-0.0466, 0.0336, 0.0282, 0.05, 0.0282, 0.0282, # TC in air
-4.5, 9, 5.72, 4.5, 2, 2) # LCt in air
+12.5, 9, 14.18, 14.18, 14.18, 14.18, # LCT_water is lower critical temperature in water in degrees C
+0.0466, 0.0336, 0.0282, 0.05, 0.0282, 0.0282, # TC is thermal conductivity in air in ml O2 g-1 hr-1 C-1
+4.5, 9, 5.72, 4.5, 2, 2) # LCT_air is lower critical temperature in air in degrees C
 
 #### Step s2_1_2: estimate winter activity & energy budgets ####
 
@@ -84,12 +85,12 @@ c(72.2), c(72.2),
 energyMonth<-list() # Monthly energy estimates
 energyDay<-list() # Daily energy estimates
 actRes_iterations<-list() # For plotting purposes
-activityMonth<-list() # For plotting purposes
+activityMonth<-list() # For plotting purposes - time in activity per month
 
-# Determine Species
+# Determine species of interest
 speciesSub<-dataSpeciesIdSub$species[1]
 
-# Determine colony
+# Determine colony of interest
 colonySub<-dataSpeciesIdSub$colony[1]
 
 # Open species-specific IRMA data (all individuals)
@@ -151,7 +152,7 @@ sessions$dist_colony<-subset(modelParamsSub, parameter=="dist_colony")$values # 
 sessions$pLand_prob<-subset(modelParamsSub, parameter=="pLand")$values # Fixed value
 sessions$c<-sample(subset(modelParamsSub, parameter=="c")$values[[1]], 1) # Sampled at random
 sessions$sst_random_start<-sessions$sst_lox_mean
-sessions$sst_random_start<-ifelse(sessions$sst_random_start < (-1.9), -1.9, sessions$sst_random_start)
+sessions$sst_random_start<-ifelse(sessions$sst_random_start < (-1.9), -1.9, sessions$sst_random_start) # Make sure no un-realistic value
 
 ### Calculate time in activity ####
 print("Calculating Activity...")
@@ -188,7 +189,7 @@ colonySub<-actRes$colony[1]
 actRes$colony<-colonySub
 actRes$individ_id<-idSub
 
-# Add temperature at colony
+# Add temperature at colony to main dataset
 tempColony<-dataSpeciesIdSub %>%
 dplyr::select(date_time, sst_col_mean, sst_col_sd) %>%
 dplyr::group_by(date_time) %>%
@@ -241,7 +242,7 @@ if (nrow(sstJoin) <1 ) {
           
 }
         
-### Summarize activity & sst at monthly level ####
+### Summarize activity & sst at monthly level for plotting purposes ####
         
 actResMonth<-sstJoin %>%
   dplyr::group_by(species, individ_id, session_id, colony, sstModel, time, Month, Year) %>%
@@ -265,7 +266,7 @@ print("Randomizing energy parameters...")
 if (actRes$species[1] %in% c("Northern fulmar", "Black-legged kittiwake")) {
 
 actRes$c2<-mean(sample(subset(modelParamsSub, parameter=="c2")$values[[1]], 1), sample(c(seq(2, 5.7, 0.1)) ,1))
-actRes$c5<-0
+actRes$c5<-0 # No active behaviour for surface-foragers 
 
 } else {
 
@@ -278,12 +279,12 @@ actRes$RMR<-sample(subset(modelParamsSub, parameter=="RMR")$values[[1]], 1) # ch
 actRes$c1<-sample(subset(modelParamsSub, parameter=="c1")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c3<-sample(subset(modelParamsSub, parameter=="c3")$values[[1]], 1) # choose at random from uniform distribution
 actRes$c4<-sample(subset(modelParamsSub, parameter=="c4")$values[[1]], 1) # Choose at random from uniform distribution
-actRes$TC_air<-subset(modelParamsSub, parameter=="TC_air")$values[[1]] # Choose at random from uniform distribution
-actRes$TC_water<-subset(modelParamsSub, parameter=="TC_water")$values[[1]] # Choose at random from uniform distribution
-actRes$Beta_active<-subset(modelParamsSub, parameter=="Beta_active")$values[[1]] # Choose at random from uniform distribution
-actRes$Beta_rest<-subset(modelParamsSub, parameter=="Beta_rest")$values[[1]] # Choose at random from uniform distribution
-actRes$LCT_air<-subset(modelParamsSub, parameter=="LCT_air")$values[[1]] # Choose the number
-actRes$LCT_water<-subset(modelParamsSub, parameter=="LCT_water")$values[[1]] # Choose the number
+actRes$TC_air<-subset(modelParamsSub, parameter=="TC_air")$values[[1]] # Choose one value
+actRes$TC_water<-subset(modelParamsSub, parameter=="TC_water")$values[[1]] # Choose one value
+actRes$Beta_active<-subset(modelParamsSub, parameter=="Beta_active")$values[[1]] # Choose one value
+actRes$Beta_rest<-subset(modelParamsSub, parameter=="Beta_rest")$values[[1]] # Choose one value
+actRes$LCT_air<-subset(modelParamsSub, parameter=="LCT_air")$values[[1]] # Choose one value
+actRes$LCT_water<-subset(modelParamsSub, parameter=="LCT_water")$values[[1]] # Choose one value
 	  
 ### Calculate energetics (monthly) ####
 print("Calculating energetics")
