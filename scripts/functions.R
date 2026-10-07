@@ -416,8 +416,8 @@ data$date_time<-as.character(data$date_time)
   
 # Here we assign three behaviours: flight, forage & rest   
 dataCalc<-data %>%
- dplyr::ungroup() %>%
- rename(new_cond=new.cond) %>%
+  dplyr::ungroup() %>%
+  rename(new_cond=new.cond) %>%
   dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
   dplyr::mutate(Activity=ifelse(new_cond<Th1, "Forage", "RestWater")) %>%
   dplyr::mutate(Activity=ifelse(new_cond<Th2, "Dry", Activity)) %>%
@@ -432,8 +432,8 @@ dataCalc<-data %>%
   
 distances_next<-dataCalc %>%
   dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   dplyr::group_by(distColonyKm) %>%
   dplyr::slice(1) %>%
   arrange(date_time) %>%
@@ -452,16 +452,16 @@ distances_next<-dataCalc %>%
 FlightBouts<-dataCalc %>%
   dplyr::filter(Activity=="Dry") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # Check no nas in date.time 
 na_dates<-subset(FlightBouts, is.na(date_time))	
@@ -518,9 +518,9 @@ FlightBoutLengths<-dataCalc %>%
   
 activityAdjust1<-FlightBoutLengths %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   dplyr::full_join(distances_next, by=c("date_time")) %>%
   arrange(date_time) %>%
   fill(distColonyKm_next, .direction=c("down")) %>%
@@ -535,7 +535,7 @@ activityAdjust1<-FlightBoutLengths %>%
   dplyr::mutate(p2=runif(n=n_distinct(BoutNo))) %>% # Determine random probability for each bout no (used for sea-ice)
   # Create a probability for being on land or ice based on this for every bout
   dplyr::mutate(pLand=ifelse(p <= pLand_prob | p2 <= ice_random, 1, 0)) %>%
-	replace_na(list(flightLengthMins=0)) %>%
+  replace_na(list(flightLengthMins=0)) %>%
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins >= L1 & PossLand==0, "Flight", NA)) %>% # If no land in sight, then it has to be flight
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins >= L1 & PossLand==1, "Land", NewActivity)) %>% # otherwise it's land
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==0, "Flight", NewActivity)) %>% # If it's short & no land then it's flight
@@ -543,13 +543,13 @@ activityAdjust1<-FlightBoutLengths %>%
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm <= dist_colony & pLand==0 , "Flight", NewActivity)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm > dist_colony & pLand==1, "Land", NewActivity)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
   dplyr::mutate(NewActivity=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm > dist_colony & pLand==0 , "Flight", NewActivity)) %>%
-	# Create new column where I count how many rows this concerns (for supplementary analysis)
-	dplyr::mutate(RandomAllocation=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm <= dist_colony & pLand==1, 1, 0)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
+  # Create new column where I count how many rows this concerns (for supplementary analysis)
+  dplyr::mutate(RandomAllocation=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm <= dist_colony & pLand==1, 1, 0)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
   dplyr::mutate(RandomAllocation=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm <= dist_colony & pLand==0 , 1, RandomAllocation)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
   dplyr::mutate(RandomAllocation=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm > dist_colony & pLand==1, 1, RandomAllocation)) %>% # In instances where bird could be on land or ice, then 50% prob of land overrules if ice concentration < 50%
   dplyr::mutate(RandomAllocation=ifelse( Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & distColonyKm > dist_colony & pLand==0 , 1, RandomAllocation)) %>%
   dplyr::mutate(Activity=ifelse(!is.na(NewActivity), NewActivity, Activity)) %>%
-	ungroup() %>%
+  ungroup() %>%
   dplyr::group_by(Activity) %>%
   dplyr::mutate(maxLength=ifelse(Activity %in% c("Flight", "Land"), max(flightLengthMins, na.rm=TRUE), NA))
   
@@ -580,10 +580,10 @@ if (length(uniqueVals)>1) {
 	
 activityAdjust2_reallocate<-activityAdjust1 %>%
   dplyr::select(-NewActivity) %>%
-	dplyr::ungroup() %>%
+  dplyr::ungroup() %>%
   dplyr::mutate(firstLand=ifelse(Activity=="Land" & !lag(Activity)=="Land", 1, 0)) %>% # Determine whether it's the first ten-minutes of a 'Land' bout
   replace_na(list(firstLand=0)) %>%
-	dplyr::mutate(LandBoutNo=cumsum(firstLand)) %>% # Number the land bouts to do some calculations by bout No later
+  dplyr::mutate(LandBoutNo=cumsum(firstLand)) %>% # Number the land bouts to do some calculations by bout No later
   dplyr::mutate(LandBoutNo=ifelse(Activity=="Land", LandBoutNo, NA)) %>% # Change the number of all non-land bouts to NA
   dplyr::group_by(LandBoutNo) %>%
   dplyr::mutate(DurationLandMins=ifelse(Activity=="Land", n_distinct(date_time)*10, NA)) %>% # Determine duration of evey land bout
@@ -607,10 +607,10 @@ activityAdjust2_reallocate<-activityAdjust1 %>%
 	
 activityAdjust2_reallocate<-activityAdjust1 %>%
   dplyr::select(-NewActivity) %>%
-	dplyr::ungroup() %>%
+  dplyr::ungroup() %>%
   dplyr::mutate(firstLand=ifelse(Activity=="Land" & !lag(Activity)=="Land", 1, 0)) %>% # Determine whether it's the first ten-minutes of a 'Land' bout
   replace_na(list(firstLand=0)) %>%
-	dplyr::mutate(LandBoutNo=cumsum(firstLand)) %>% # Now i number the land bouts so I get do some calculations by bout No later
+  dplyr::mutate(LandBoutNo=cumsum(firstLand)) %>% # Now i number the land bouts so I get do some calculations by bout No later
   dplyr::mutate(LandBoutNo=ifelse(Activity=="Land", LandBoutNo, NA)) %>% # this just turns the number of all non-land bouts to NA
   dplyr::group_by(LandBoutNo) %>%
   dplyr::mutate(DurationLandMins=ifelse(Activity=="Land", n_distinct(date_time)*10, NA)) %>% # Determine duration of evey land bout
@@ -635,16 +635,16 @@ activityAdjust2_reallocate<-activityAdjust1 %>%
 FlightBouts_final<-activityAdjust2_reallocate %>%
   dplyr::filter(Activity=="Flight") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >11) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # 8: CALCULATE FINAL FLIGHT-BOUT DURATIONS & RECLASSIFY LONG FLIGHTS
 
@@ -653,7 +653,7 @@ FlightBouts_final<-activityAdjust2_reallocate %>%
 # is geographically possible.
 	
 FlightBoutLengths_final<-activityAdjust2_reallocate %>%
-	dplyr::mutate(date_time=as.character(date_time)) %>%
+  dplyr::mutate(date_time=as.character(date_time)) %>%
   dplyr::select(-BoutNo) %>%
   dplyr::left_join(FlightBouts_final, by=c("date_time")) %>%
   dplyr::group_by(Activity) %>%
@@ -662,8 +662,8 @@ FlightBoutLengths_final<-activityAdjust2_reallocate %>%
   dplyr::group_by(BoutNo) %>%
   dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
   dplyr::mutate(flightLengthMins=ifelse(Activity=="Flight", flightLengthMins, NA)) %>%
-	ungroup() %>%
-	dplyr::mutate(Activity=ifelse(Activity=="Flight" & PossLand==1 & flightLengthMins > L1, "Land", Activity)) %>%
+  ungroup() %>%
+  dplyr::mutate(Activity=ifelse(Activity=="Flight" & PossLand==1 & flightLengthMins > L1, "Land", Activity)) %>%
   ungroup()
 	
 # 9: CALCULATE DARKNESS-PERIOD FLIGHT STATISTICS
@@ -672,46 +672,46 @@ FlightBoutLengths_final<-activityAdjust2_reallocate %>%
 # Twilight is merged into Daylight, leaving two effective periods: Daylight and Darkness.
 
 dataCalcDay_period<-FlightBoutLengths_final %>%
-	dplyr::ungroup() %>%
-	dplyr::mutate(date=substr(date_time, 1, 10)) %>%
-	dplyr::mutate(Period=ifelse(Period %in% c("Daylight", "Twilight"), "Daylight", "Darkness")) %>%
-	dplyr::group_by(date, Period) %>%
-	dplyr::mutate(Duration=n_distinct(date_time)*10) %>%
-	ungroup() %>%
-	dplyr::group_by(species, colony, session_id, date, Period, Activity, BoutNo, distColonyKm) %>%
-	dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
-	dplyr::mutate(flightLengthMins=ifelse(!Activity %in% c("Flight"), 0, flightLengthMins))%>%
-	ungroup() %>%
-	dplyr::group_by(species, colony, session_id, date, Period) %>%
-	dplyr::mutate(Forage=ifelse(Activity=="Forage", 1, 0), RestWater=ifelse(Activity=="RestWater", 1, 0), Flight=ifelse(Activity=="Flight", 1, 0), Land=ifelse(Activity=="Land", 1, 0), Daylight=ifelse(Period=="Daylight", 1, 0),
-					  Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0)) %>%
-	dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
-						 tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, maxFlightBoutsMins_dark=max(flightLengthMins)) %>%
-	dplyr::mutate(propDay_forage=tForage/tDaylight, propflight_dark=tFlight/tDarkness, flightTimeMins_dark=tFlight*60)  %>%
-	ungroup() %>%
-	dplyr::filter(Period=="Darkness") %>%
-	dplyr::select(date, propflight_dark, maxFlightBoutsMins_dark, flightTimeMins_dark)
+  dplyr::ungroup() %>%
+  dplyr::mutate(date=substr(date_time, 1, 10)) %>%
+  dplyr::mutate(Period=ifelse(Period %in% c("Daylight", "Twilight"), "Daylight", "Darkness")) %>%
+  dplyr::group_by(date, Period) %>%
+  dplyr::mutate(Duration=n_distinct(date_time)*10) %>%
+  ungroup() %>%
+  dplyr::group_by(species, colony, session_id, date, Period, Activity, BoutNo, distColonyKm) %>%
+  dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
+  dplyr::mutate(flightLengthMins=ifelse(!Activity %in% c("Flight"), 0, flightLengthMins))%>%
+  ungroup() %>%
+  dplyr::group_by(species, colony, session_id, date, Period) %>%
+  dplyr::mutate(Forage=ifelse(Activity=="Forage", 1, 0), RestWater=ifelse(Activity=="RestWater", 1, 0), Flight=ifelse(Activity=="Flight", 1, 0), Land=ifelse(Activity=="Land", 1, 0), Daylight=ifelse(Period=="Daylight", 1, 0),
+                Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0)) %>%
+  dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
+                   tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, maxFlightBoutsMins_dark=max(flightLengthMins)) %>%
+  dplyr::mutate(propDay_forage=tForage/tDaylight, propflight_dark=tFlight/tDarkness, flightTimeMins_dark=tFlight*60)  %>%
+  ungroup() %>%
+  dplyr::filter(Period=="Darkness") %>%
+  dplyr::select(date, propflight_dark, maxFlightBoutsMins_dark, flightTimeMins_dark)
 	  
 # 10: CALCULATE MAXIMUM DAILY FLIGHT-BOUT LENGTH
 
 daily_max_flightBout<-FlightBoutLengths_final %>%
-	dplyr::ungroup() %>%
-	dplyr::mutate(date=substr(date_time, 1, 10)) %>%
-	dplyr::filter(Activity=="Flight") %>%
-	dplyr::group_by(date, BoutNo) %>%
-	dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
-	ungroup() %>%
-	dplyr::group_by(date) %>%
-	dplyr::summarise(maxFlightBoutsMins=max(flightLengthMins))
+  dplyr::ungroup() %>%
+  dplyr::mutate(date=substr(date_time, 1, 10)) %>%
+  dplyr::filter(Activity=="Flight") %>%
+  dplyr::group_by(date, BoutNo) %>%
+  dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
+  ungroup() %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(maxFlightBoutsMins=max(flightLengthMins))
 
 # Calculate a corresponding darkness-specific flight metric
 
 daily_max_flightBout_dark<- dataCalcDay_period%>%
-	dplyr::ungroup() %>%
-	#dplyr::filter(Activity=="Flight") %>%
-	dplyr::group_by(date) %>%
-	dplyr::summarise(maxFlightBoutsMins_dark=max(flightTimeMins_dark)) %>%
-	ungroup() 
+  dplyr::ungroup() %>%
+  #dplyr::filter(Activity=="Flight") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(maxFlightBoutsMins_dark=max(flightTimeMins_dark)) %>%
+  ungroup() 
 
 # 11: CALCULATE DAILY ACTIVITY BUDGETS
 
@@ -720,26 +720,26 @@ daily_max_flightBout_dark<- dataCalcDay_period%>%
 # (at least 1430 minutes of observations) are retained.
 	  
 dataCalcDay<-FlightBoutLengths_final %>%
-	dplyr::ungroup() %>%
-	dplyr::mutate(date=substr(date_time, 1, 10)) %>%
-	dplyr::group_by(date) %>%
-	dplyr::mutate(Duration=n_distinct(date_time)*10) %>%
-	dplyr::filter(Duration>=1430) %>%  # Only keep full days %>%
-	dplyr::group_by(species, colony, session_id, date) %>%
-	dplyr::mutate(Forage=ifelse(Activity=="Forage", 1, 0), RestWater=ifelse(Activity=="RestWater", 1, 0), Flight=ifelse(Activity=="Flight", 1, 0), Land=ifelse(Activity=="Land", 1, 0), Daylight=ifelse(Period=="Daylight", 1, 0),
-					  Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0), sstRandom=sst_random_start) %>%
-	dplyr::mutate(sstRandom=ifelse(sstRandom < -1.9, -1.9, sstRandom)) %>%
-	dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
-						 tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
-						 sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean, na.rm=TRUE), immersionType=mean(max.cond), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon),
-						 mean.lat=mean(lat), boutsRandom=(sum(RandomAllocation)/144)) %>%
-	ungroup() %>%
-	dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(date=substr(date_time, 1, 10)) %>%
+  dplyr::group_by(date) %>%
+  dplyr::mutate(Duration=n_distinct(date_time)*10) %>%
+  dplyr::filter(Duration>=1430) %>%  # Only keep full days %>%
+  dplyr::group_by(species, colony, session_id, date) %>%
+  dplyr::mutate(Forage=ifelse(Activity=="Forage", 1, 0), RestWater=ifelse(Activity=="RestWater", 1, 0), Flight=ifelse(Activity=="Flight", 1, 0), Land=ifelse(Activity=="Land", 1, 0), Daylight=ifelse(Period=="Daylight", 1, 0),
+                Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0), sstRandom=sst_random_start) %>%
+  dplyr::mutate(sstRandom=ifelse(sstRandom < -1.9, -1.9, sstRandom)) %>%
+  dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
+                   tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
+                   sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean, na.rm=TRUE), immersionType=mean(max.cond), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon),
+                   mean.lat=mean(lat), boutsRandom=(sum(RandomAllocation)/144)) %>%
+  ungroup() %>%
+  dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
   dplyr::mutate(dayLengthHrs=tDaylight) %>%
-	dplyr::group_by(date) %>%
-	dplyr::mutate(DurationTot=sum(tForage, tRestWater, tLand, tFlight)) %>%
-	dplyr::left_join(daily_max_flightBout, by=c("date")) %>%
-	dplyr::left_join(dataCalcDay_period, by=c("date")) 
+  dplyr::group_by(date) %>%
+  dplyr::mutate(DurationTot=sum(tForage, tRestWater, tLand, tFlight)) %>%
+  dplyr::left_join(daily_max_flightBout, by=c("date")) %>%
+  dplyr::left_join(dataCalcDay_period, by=c("date")) 
 	
   
 # 12: CALCULATE ACTIVITY BUDGETS SEPARATELY FOR DAYLIGHT AND DARKNESS
@@ -755,9 +755,9 @@ dataCalcDay_period2<-FlightBoutLengths_final %>%
   dplyr::mutate(Duration=n_distinct(date_time)*10) %>%
   dplyr::group_by(species, colony, session_id, date,  Period) %>%
   dplyr::mutate(Forage=ifelse(Activity=="Forage", 1, 0), RestWater=ifelse(Activity=="RestWater", 1, 0), Flight=ifelse(Activity=="Flight", 1, 0), Land=ifelse(Activity=="Land", 1, 0), Daylight=ifelse(Period=="Daylight", 1, 0),
-                  Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0)) %>%
+                Darkness=ifelse(Period=="Darkness", 1, 0), Twilight=ifelse(Period=="Twilight", 1, 0)) %>%
   dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tRestWater=sum(RestWater)*10/60, tLand=sum(Land)*10/60,
-                     tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10) 
+                   tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10) 
   
 # 13: EXTRACT INDIVIDUAL FLIGHT BOUTS FOR SUPPLEMENTARY ANALYSIS
 
@@ -767,9 +767,9 @@ dataCalcDay_period2<-FlightBoutLengths_final %>%
 finalFlightBoutNos<-FlightBoutLengths_final %>%
   dplyr::filter(Activity=="Flight") %>%
   dplyr::ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
@@ -782,15 +782,15 @@ finalFlightBoutNos<-FlightBoutLengths_final %>%
 # the final duration of every individual Flight bout.
 
 finalFlightBoutLengths<-FlightBoutLengths_final %>%
-	dplyr::select(-BoutNo) %>%
+  dplyr::select(-BoutNo) %>%
   dplyr::filter(Activity=="Flight") %>%
   dplyr::ungroup() %>%
-	dplyr::left_join(finalFlightBoutNos, by=c("date_time")) %>%
-	dplyr::group_by(species, colony, individ_id) %>%
-	fill(BoutNo, .direction=c("down")) %>%
-	dplyr::ungroup() %>%
-	dplyr::group_by(BoutNo) %>%
-	dplyr::mutate(flightLengthMins=n_distinct(date_time)*10)
+  dplyr::left_join(finalFlightBoutNos, by=c("date_time")) %>%
+  dplyr::group_by(species, colony, individ_id) %>%
+  fill(BoutNo, .direction=c("down")) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(BoutNo) %>%
+  dplyr::mutate(flightLengthMins=n_distinct(date_time)*10)
 	
 # Save results
 #write.csv(finalFlightBoutLengths, file=paste0("./results/tables/supplementary/fulmarBoutLengths/fulmar_flightbouts_", finalFlightBoutLengths$individ_id[1], "_rep", i, ".csv"))
@@ -840,8 +840,8 @@ dataCalc<-data %>%
   dplyr::ungroup() %>%
   dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
   dplyr::mutate(MaxDistColKm=max(distColonyKm)) %>%
-	arrange(date) %>%
-	ungroup()  
+  arrange(date) %>%
+  ungroup()  
   
 # 2: CALCULATE DISTANCE TO COLONY AT THE NEXT LOCATION
 
@@ -858,8 +858,8 @@ distances_next<-dataCalc %>%
   dplyr::mutate(distColonyKm_next=lead(distColonyKm)) %>%
   dplyr::mutate(distColonyKm_next=ifelse(is.na(distColonyKm_next), distColonyKm, distColonyKm_next)) %>%
   dplyr::select(-distColonyKm) %>%
-	ungroup() %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  ungroup() %>%
+  dplyr::mutate(date_time=as.character(date_time))
   
 # 3: INITIAL DRY/OTHER CLASSIFICATION
 
@@ -879,17 +879,17 @@ dataCalc$Activity<-ifelse(dataCalc$new.cond<=data$Th2[1], "Dry", "Other")
 FlightBouts<-dataCalc %>%
   dplyr::filter(Activity=="Dry") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, session_id, date_time) %>%
-	dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
+  dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	distinct() %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  distinct() %>%
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # Make sure no NAs in date_time
 nas_date<-subset(FlightBouts, is.na(date_time))
@@ -900,7 +900,7 @@ if (nrow(nas_date)>0) {stop(print("Error: nas in date_time")) }
 # of each Dry bout assuming observations represent 10-minute intervals.
 
 FlightBoutLengths<-dataCalc %>%
-	dplyr::mutate(date_time=as.character(date_time)) %>%
+  dplyr::mutate(date_time=as.character(date_time)) %>%
   dplyr::left_join(FlightBouts, by=c("date_time")) %>%
   dplyr::group_by(Activity) %>%
   fill(BoutNo, .direction=c("down")) %>%
@@ -928,8 +928,8 @@ FlightBoutLengths$use_seaice<-ifelse(dataCalc$species[1] %in% c("Little auk", "B
 darkness_boutNo<-FlightBoutLengths %>%
   ungroup() %>%
   dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   dplyr::filter(Period=="Darkness")  %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
@@ -952,7 +952,7 @@ darkness_propDry<-dataCalc %>%
   dplyr::mutate(totDry=sum(1-new.cond)*10, darknessLength=n_distinct(date_time)*10) %>%
   dplyr::mutate(propDarkDry=ifelse(Period=="Darkness", totDry/darknessLength, NA)) %>%
   ungroup() %>%
-	dplyr::select(date_time, BoutNo_dark, propDarkDry)
+  dplyr::select(date_time, BoutNo_dark, propDarkDry)
   
 # Allocate Dry observations during darkness to Land or RestWater.
 #
@@ -965,7 +965,7 @@ darkness_propDry<-dataCalc %>%
 
 activityAdjust1<-FlightBoutLengths %>%
   ungroup() %>%
-	dplyr::left_join(darkness_propDry, by=c("date_time")) %>% # Join info on proportion of night dry
+  dplyr::left_join(darkness_propDry, by=c("date_time")) %>% # Join info on proportion of night dry
   dplyr::full_join(distances_next, by=c("date_time")) %>% # Join info on distance to colony
   arrange(date_time) %>%
   fill(distColonyKm_next, .direction=c("down")) %>%
@@ -974,12 +974,12 @@ activityAdjust1<-FlightBoutLengths %>%
   dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), first(ice_random), NA)) %>%
   dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random<0, 0, ice_random)) %>%
   dplyr::mutate(ice_random=ifelse(!is.na(BoutNo) & ice_random>1, 1, ice_random)) %>%
-	dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Make this null if species does not stand on ice
+  dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Make this null if species does not stand on ice
   # Determine whether the bird could have been on land or not (PossLand)
   dplyr::mutate(PossLand=ifelse( ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <= dist_colony, 1, 0)) %>%
-	# Change this to zero if prop night that is dry is not equal to 1
-	dplyr::mutate(PossLand=ifelse(propDarkDry==1, PossLand, 0)) %>%
-	replace_na(list(PossLand=0)) %>%
+  # Change this to zero if prop night that is dry is not equal to 1
+  dplyr::mutate(PossLand=ifelse(propDarkDry==1, PossLand, 0)) %>%
+  replace_na(list(PossLand=0)) %>%
   # Generate random probabilities & use these to determine whether a bird could have been on land or not
   dplyr::mutate(p=runif(n=n_distinct(BoutNo))) %>%
   dplyr::mutate(p2=runif(n=n_distinct(BoutNo))) %>%
@@ -987,8 +987,8 @@ activityAdjust1<-FlightBoutLengths %>%
   dplyr::mutate(NewActivity=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==0, "RestWater", NA)) %>%
   dplyr::mutate(NewActivity=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==1, "Land", NewActivity)) %>%
   dplyr::mutate(NewActivity=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==0, "RestWater", NewActivity)) %>%
-	dplyr::mutate(RandomAllocation=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==1, 1, 0)) %>%
-	dplyr::mutate(RandomAllocation=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==0, 1, RandomAllocation)) %>%
+  dplyr::mutate(RandomAllocation=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==1, 1, 0)) %>%
+  dplyr::mutate(RandomAllocation=ifelse(Period=="Darkness" & Activity=="Dry" & PossLand==1 & pLand==0, 1, RandomAllocation)) %>%
   dplyr::mutate(Activity=ifelse(!is.na(NewActivity), NewActivity, Activity))
   
 # 6: CLASSIFY REMAINING DRY OBSERVATIONS DURING DAYLIGHT
@@ -1000,31 +1000,31 @@ activityAdjust1<-FlightBoutLengths %>%
 FlightBouts2<-activityAdjust1 %>%
   dplyr::filter(Activity=="Dry") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  dplyr::mutate(date_time=as.character(date_time))
   
 # Recalculate the duration of remaining Dry bouts.
 
 FlightBoutLengths2<-activityAdjust1 %>%
-	ungroup() %>%
-	dplyr::select(-BoutNo) %>%
-	dplyr::left_join(FlightBouts2, by=c("date_time")) %>%
-	dplyr::ungroup() %>%
-	dplyr::group_by(Activity) %>%
-	fill(BoutNo, .direction=c("down")) %>%
-	dplyr::ungroup() %>%
-	dplyr::group_by(BoutNo, distColonyKm) %>%
-	dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
-	dplyr::mutate(flightLengthMins=ifelse(Activity=="Dry", flightLengthMins, 0)) %>%
-	ungroup()
+  ungroup() %>%
+  dplyr::select(-BoutNo) %>%
+  dplyr::left_join(FlightBouts2, by=c("date_time")) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(Activity) %>%
+  fill(BoutNo, .direction=c("down")) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(BoutNo, distColonyKm) %>%
+  dplyr::mutate(flightLengthMins=n_distinct(date_time)*10) %>%
+  dplyr::mutate(flightLengthMins=ifelse(Activity=="Dry", flightLengthMins, 0)) %>%
+  ungroup()
 
 # Allocate daylight Dry observations according to bout duration, whether landing
 # is possible, and the probabilistic landing parameter.
@@ -1045,7 +1045,7 @@ activityAdjust2<-FlightBoutLengths2 %>%
   dplyr::mutate(ice_random=ifelse(!is.na(BoutNo), ice_mean, NA)) %>%
   dplyr::mutate(ice_random=ifelse(ice_random<0, 0, ice_random)) %>%
   dplyr::mutate(ice_random=ifelse(ice_random>1, 1, ice_random)) %>%
-	dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Change this to zero if species is incorrect
+  dplyr::mutate(ice_random=ifelse(use_seaice==1, ice_random, 0)) %>% # Change this to zero if species is incorrect
   # Determine whether it was possible for the bird to be on land or not (PossLand)
   dplyr::mutate(PossLand=ifelse(ice_random >0 | distColonyKm <= dist_colony | distColonyKm_next <=dist_colony, 1, 0)) %>%
   # Generate random probabilities which will be used to determine whether bird is on land or not (pLand)
@@ -1058,8 +1058,8 @@ activityAdjust2<-FlightBoutLengths2 %>%
   dplyr::mutate(NewActivity=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins < L1 & PossLand==0, sample(c("Flight", "RestWater"), 1), NewActivity)) %>%
   dplyr::mutate(NewActivity=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & pLand==1, "Land", NewActivity)) %>%
   dplyr::mutate(NewActivity=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & pLand ==0, sample(c("Flight", "RestWater"), 1), NewActivity)) %>%
-	# Sum how often these random allocations occurs
-	dplyr::mutate(RandomAllocation=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins >= L1 & PossLand==1 & pLand == 1, 1, RandomAllocation)) %>% # otherwise it's land
+  # Sum how often these random allocations occurs
+  dplyr::mutate(RandomAllocation=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins >= L1 & PossLand==1 & pLand == 1, 1, RandomAllocation)) %>% # otherwise it's land
   dplyr::mutate(RandomAllocation=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins >= L1 & PossLand==1 & pLand == 0, 1, RandomAllocation)) %>% # otherwise it's land
   dplyr::mutate(RandomAllocation=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins < L1 & PossLand==0, 1, RandomAllocation)) %>%
   dplyr::mutate(RandomAllocation=ifelse(!Period=="Darkness" & Activity=="Dry" & flightLengthMins < L1 & PossLand==1 & pLand==1, 1, RandomAllocation)) %>%
@@ -1102,7 +1102,7 @@ dry_lengths<-dry_final %>%
   dplyr::filter(gap>10) %>%
   dplyr::mutate(DryBoutNo=row_number()) %>%
   dplyr::select(date_time, DryBoutNo) %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  dplyr::mutate(date_time=as.character(date_time))
   
 # Determine whether L1_colony is being sampled across a range of values
 # or fixed to one value for the sensitivity analysis.
@@ -1196,17 +1196,17 @@ if(nrow(nas)>0  | nrow(other)>0) {
 FlightBouts_lastcheck<-reAllocate %>%
   dplyr::filter(Activity=="Flight") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	distinct() %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  distinct() %>%
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # Make sure no NAs in date_time
 nas_date<-subset(FlightBouts_lastcheck, is.na(date_time))
@@ -1241,17 +1241,17 @@ FlightBoutLengths_lastcheck_reclassify<-FlightBoutLengths_lastcheck %>%
 FlightBouts_lastcheck2<-FlightBoutLengths_lastcheck_reclassify %>%
   dplyr::filter(Activity=="Flight") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	distinct() %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  distinct() %>%
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # Make sure no NAs in date_time
 nas_date<-subset(FlightBouts_lastcheck2, is.na(date_time))
@@ -1294,17 +1294,17 @@ FlightBoutLengths_lastcheck_reclassify2<-FlightBoutLengths_lastcheck2 %>%
 FlightBouts_lastcheck3<-FlightBoutLengths_lastcheck_reclassify2 %>%
   dplyr::filter(Activity=="Flight") %>%
   ungroup() %>%
-	dplyr::mutate(date_characters=nchar(date_time)) %>%
-	dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
-	dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
+  dplyr::mutate(date_characters=nchar(date_time)) %>%
+  dplyr::mutate(date_time=ifelse(date_characters<19, paste(date_time, "00:00:00", sep=" "), date_time)) %>%
+  dplyr::mutate(date_time=as.POSIXct(date_time, format=c("%Y-%m-%d %H:%M:%S"), tz="UTC")) %>%
   arrange(individ_id, date_time) %>%
   dplyr::mutate(timediff=as.numeric(difftime(date_time, lag(date_time), unit=c("mins")))) %>%
   replace_na(list("timediff"=0)) %>%
   dplyr::filter(timediff==0 | timediff >10) %>%
   dplyr::mutate(BoutNo=row_number()) %>%
   dplyr::select(date_time, BoutNo) %>%
-	distinct() %>%
-	dplyr::mutate(date_time=as.character(date_time))
+  distinct() %>%
+  dplyr::mutate(date_time=as.character(date_time))
 	
 # Make sure no NAs in date_time
 nas_date<-subset(FlightBouts_lastcheck3, is.na(date_time))
@@ -1379,12 +1379,12 @@ dataCalcDay<-FlightBoutLengths_lastcheck3 %>%
   dplyr::summarise(tForage=sum(Forage)*10/60, tRestWater1=sum(RestWater)*10/60, tFlight=sum(Flight)*10/60, tActive=sum(Active)*10/60, tLand=sum(Land)*10/60,
                      tDaylight=sum(Daylight)*10/60, tDarkness=sum(Darkness)*10/60, tTwilight=sum(Twilight)*10/60, Duration=n_distinct(date_time)*10, MaxDistColKm=max(MaxDistColKm),
                      sst_random=mean(sstRandom), ice_random=mean(ice_random, na.rm=TRUE), air_random=mean(air_mean), distColonyKm_mean=mean(distColonyKm, na.rm=TRUE), mean.lon=mean(lon), mean.lat=mean(lat),
-					 boutsRandom=(sum(RandomAllocation)/144), immersionType=mean(max.cond)) %>%
+                   boutsRandom=(sum(RandomAllocation)/144), immersionType=mean(max.cond)) %>%
   ungroup() %>%
   dplyr::mutate(doy=floor(as.numeric(difftime(date, as.Date(paste0(substr(date, 1, 4), "-01-01"))), unit=c("days"))) + 1) %>%
   dplyr::group_by(date) %>%
-	dplyr::mutate(tRestWater2=tRestWater1*data$c[1], amountSub=tRestWater2-tRestWater1) %>%
-	dplyr::mutate(tActive2=ifelse(amountSub > tActive, 0, tActive-amountSub), tRestWater2=ifelse(amountSub>tActive, tRestWater1 + tActive, tRestWater2)) %>%
+  dplyr::mutate(tRestWater2=tRestWater1*data$c[1], amountSub=tRestWater2-tRestWater1) %>%
+  dplyr::mutate(tActive2=ifelse(amountSub > tActive, 0, tActive-amountSub), tRestWater2=ifelse(amountSub>tActive, tRestWater1 + tActive, tRestWater2)) %>%
   dplyr::select(-c(tActive, tRestWater1)) %>%
   dplyr::rename(tActive=tActive2, tRestWater=tRestWater2) %>%
   dplyr::mutate(tActive=ifelse(tActive<0, 0, tActive)) %>%
